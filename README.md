@@ -2,12 +2,18 @@
 
 # Project Kernseife
 
+> [!TIP]
+> In case of issues please check the [FAQ](https://github.com/SAP/project-kernseife/blob/main/faq.md). Feel free to open an issue in case there is no solution. Keep in mind this is an open-source project.
+
 ## About this project
 
 Project Kernseife is an open-source custom ABAP Test Cockpit (ATC) Check for ABAP systems that enables you to flexibly score the usage of SAP objects in your system, e.g. to score the technical debt regarding clean core based on a custom, adjustable classification.
 This check is an enhanced version of the 3-Tier Model ATC (see [SAP Note 3565942](https://me.sap.com/notes/3565942)), where you can introduce a custom classification in a JSON format. A description of the  classification can be found in the [Classification Guide](https://github.com/SAP/project-kernseife/blob/main/classification-guide.md).
 
 ## Requirements and Setup
+
+> [!NOTE]
+> As this check is closely linked the standard check provided by [SAP Note 3565942](https://me.sap.com/notes/3565942), please make sure to use the matching release of Kernseife in regards to the Note Version. The Release Notes mention the supported Note version.
 
 [How-To Guide for Installation](https://github.com/SAP/project-kernseife/blob/main/installation-guide.md)
 
