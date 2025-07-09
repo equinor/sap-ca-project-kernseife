@@ -2,6 +2,8 @@
 
 # Project Kernseife
 
+[!IMPORTANT] In case of issues please check-out the [FAQ](https://github.com/SAP/project-kernseife/blob/main/faq.md) first.
+
 ## About this project
 
 Project Kernseife is an open-source custom ABAP Test Cockpit (ATC) Check for ABAP systems that enables you to flexibly score the usage of SAP objects in your system, e.g. to score the technical debt regarding clean core based on a custom, adjustable classification.
