@@ -268,13 +268,28 @@ CLASS zknsf_cl_api_usage IMPLEMENTATION.
     code_with_successor = COND #( WHEN has_successor = abap_true THEN |{ message_code }_SUC| ELSE message_code ).
 
     DATA(available_message_codes) = get_message_codes( ).
+
     IF line_exists( available_message_codes[ code = code_with_successor ] ) ##WARN_OK.
+      " Check if message Type S
+      IF  track_language_version_attr IS INITIAL AND available_message_codes[ code = code_with_successor ]-kind = 'S'.
+        RETURN.
+      ENDIF.
       super->inform_atc(
         message_code = code_with_successor
         used_api     = used_api
         successors   = successors
       ).
+    ELSEIF line_exists( available_message_codes[ code = message_code ] ) ##WARN_OK.
+      IF  track_language_version_attr IS INITIAL AND available_message_codes[ code = message_code ]-kind = 'S'.
+        RETURN.
+      ENDIF.
+      super->inform_atc(
+        message_code = message_code
+        used_api     = used_api
+        successors   = successors
+      ).
     ELSE.
+      " Code does not exist => just report it
       super->inform_atc(
         message_code = message_code
         used_api     = used_api
@@ -363,6 +378,7 @@ CLASS zknsf_cl_api_usage IMPLEMENTATION.
 
 
   METHOD get_message_code.
+
     result = VALUE scimessage( test = myname
                                code = code
                                kind = kind
@@ -371,7 +387,7 @@ CLASS zknsf_cl_api_usage IMPLEMENTATION.
   ENDMETHOD.
 
 
- METHOD get_usage_preprocessor.
+  METHOD get_usage_preprocessor.
     IF usage_preprocessor IS INITIAL.
       usage_preprocessor = NEW zknsf_cl_usage_preprocessor( rfc_destination ).
     ENDIF.
