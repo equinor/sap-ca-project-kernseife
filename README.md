@@ -3,7 +3,7 @@
 # 🧼 Project Kernseife
 
 > [!TIP]
-> In case of issues please check the [FAQ](https://github.com/SAP/project-kernseife/blob/main/faq.md). Feel free to open an issue in case there is no solution. Keep in mind this is an open-source project.
+> In case of issues please check the [FAQ](https://github.com/SAP/project-kernseife/wiki/FAQ). Feel free to open an issue in case there is no solution. Keep in mind this is an open-source project.
 
 > [!CAUTION]  
 > Version 1.3.x is out with major changes. Please checkout the [Release Information](https://github.com/SAP/project-kernseife/releases/tag/v1.3.4) for details.
@@ -12,12 +12,12 @@
 ## 📖 About this project
 
 Project Kernseife is an open-source custom ABAP Test Cockpit (ATC) Check for ABAP systems that enables you to flexibly score the usage of SAP objects in your system, e.g. to score the technical debt regarding clean core based on a custom, adjustable classification.
-This check is an enhanced version of the "Usage of APIs" Check (see [SAP Note 3565942](https://me.sap.com/notes/3565942)), where you can introduce a custom classification in a JSON format. A description of the  classification can be found in the [Classification Guide](https://github.com/SAP/project-kernseife/blob/main/classification-guide.md).
+This check is an enhanced version of the "Usage of APIs" Check (see [SAP Note 3565942](https://me.sap.com/notes/3565942)), where you can introduce a custom classification in a JSON format. A description of the  classification can be found in the [Classification Guide](https://github.com/SAP/project-kernseife/wiki/Classification-Guide).
 
 ## 🚀 Requirements and Setup
 
-- [📝 How-To Guide for the ATC Check Installation](https://github.com/SAP/project-kernseife/blob/main/installation-guide-abap.md)
-- [🌐 How-To Guide for the BTP App Installation](https://github.com/SAP/project-kernseife/blob/main/installation-guide-btp.md)
+- [📝 How-To Guide for the ATC Check Installation](https://github.com/SAP/project-kernseife/wiki/ABAP-Installation-Guide)
+- [🌐 How-To Guide for the BTP App Installation](https://github.com/SAP/project-kernseife/wiki/BTP-Installation-Guide)
 
 ## 🤲 Contributing
 
