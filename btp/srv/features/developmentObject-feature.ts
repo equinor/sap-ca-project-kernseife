@@ -150,9 +150,10 @@ const calculateScoreAndLevel = async (
       devClass: developmentObject.devClass
     })
     .groupBy('objectType', 'objectName', 'devClass');
+    LOG.info('Score Calculation Result', { result });
   return {
     score: result[0]?.score || 0,
-    potentialScore: result[0]?.potentialScore || result[0]?.score || 0,
+    potentialScore: result[0]?.potentialScore != null ? result[0]?.potentialScore : result[0]?.score || 0,
     level: result[0]?.level || CleanCoreLevel.A,
     potentialLevel:
       result[0]?.potentialLevel || result[0]?.level || CleanCoreLevel.A
@@ -235,18 +236,22 @@ export const importFinding = async (
       }
 
       if (findingRecord.messageId!.endsWith('_SUC')) {
+       
         // Find Successors
         const successorKey = getSuccessorKey(
           finding.refObjectType,
           finding.refObjectName
         );
         findingRecord.potentialMessageId = successorMap.get(successorKey);
+
+        //LOG.info('Finding has a Successor', { findingRecord, successorKey });
       }
       if (!findingRecord.potentialMessageId) {
         // No Successor, so use the same as messageId
         findingRecord.potentialMessageId = findingRecord.messageId;
       }
 
+      //LOG.info('Importing Finding Record', { findingRecord });
       return findingRecord;
     })
     .filter((finding) => {
