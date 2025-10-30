@@ -159,7 +159,7 @@ entity FindingsAggregated           as
         key f.systemId,
         key f.refObjectName,
         key f.refObjectType,
-            f.messageId           as code,
+        key f.messageId           as code,
             r1.score              as score,
             r1.level              as level,
             r1.criticality        as criticality,
