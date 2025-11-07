@@ -10,7 +10,7 @@
   "scripts": {
     "start": "cds-serve",
     "dev": "cds-ts watch",
-
+    "hybrid": "cds-ts watch --profile hybrid",
     "format": "npx pretty-quick --pattern \"**/*.*(js|ts|json)\" && format-cds",
     "lint": "eslint . --fix",
     "prebuild": "npm run lint && npm run cleanup:build",
@@ -107,14 +107,12 @@
           }
         }
       },
-      "API_OBJECT_METADATA": {
+      "kernseife_btp": {
         "kind": "odata-v4",
-        "model": "srv/external/API_OBJECT_METADATA",
-        "[production]": {
-          "credentials": {
-            "path": "/sap/opu/odata4/sap/zapi_ks_object_metadata/srvd_a2x/sap/zapi_ks_object_metadata/0001",
-            "destination": "kernseife"
-          }
+        "model": "srv/external/kernseife_btp",
+        "csrf": true,
+        "credentials": {
+          "path": "/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001"
         }
       }
     },

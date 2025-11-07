@@ -10,6 +10,11 @@ annotate AdminService.Systems with @(UI: {
         },
         {
             $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>btp}',
+            Target: '@UI.FieldGroup#BTP'
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
             Label : '{i18n>admin}',
             Target: '@UI.FieldGroup#Admin'
         },
@@ -32,6 +37,10 @@ annotate AdminService.Systems with @(UI: {
             Label: '{i18n>customer}'
         }
     ]},
+    FieldGroup #BTP    : {Data: [{
+        Value: destination,
+        Label: '{i18n>destination}',
+    }]},
     FieldGroup #Admin  : {Data: [
         {
             Value: createdBy,
@@ -50,7 +59,19 @@ annotate AdminService.Systems with @(UI: {
             Label: '{i18n>modifiedAt}',
         }
     ]}
-});
+},
+    UI.Identification : [
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'AdminService.syncRatings',
+            Label : '{i18n>syncRatings}',
+        },
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'AdminService.syncClassifications',
+            Label : '{i18n>syncClassifications}',
+        },
+    ],);
 
 annotate service.Systems with @(UI.LineItem: [
     {

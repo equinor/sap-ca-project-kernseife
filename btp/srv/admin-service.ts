@@ -6,14 +6,16 @@ import {
   assignFrameworkByRef,
   assignSuccessorByRef,
   getClassificationCount,
+  getClassificationJsonAsZip,
   getClassificationJsonCloud,
   getClassificationJsonCustom,
   getClassificationJsonStandard,
-  getMissingClassifications,
   importEnhancementObjectsById,
   importExpliticObjectsById,
   importGithubClassificationById,
-  importMissingClassificationsById
+  importMissingClassificationsById,
+  syncClassificationsToExternalSystemByRef,
+  syncClassificationsToExternalSystems
 } from './features/classification-feature';
 import {
   calculateScores,
@@ -33,9 +35,12 @@ import {
 } from './features/releaseState-feature';
 import { createInitialData } from './features/setup-feature';
 import { uploadFile } from './features/upload-feature';
-import { JobResult } from './types/file';
-import papa from 'papaparse';
 import JSZip from 'jszip';
+import { updateDestinations } from './lib/connectivity';
+import {
+  syncRatingsToExternalSystemByRef,
+  syncRatingsToExternalSystems
+} from './features/ratings-feature';
 
 export default (srv: Service) => {
   const LOG = log('AdminService');
@@ -151,12 +156,7 @@ export default (srv: Service) => {
       return req.error(400, `Missing mandatory parameter`);
     }
     const configUrl = req.data.configUrl;
-    await createInitialData(
-      contactPerson,
-      prefix,
-      customerTitle,
-      configUrl
-    );
+    await createInitialData(contactPerson, prefix, customerTitle, configUrl);
   });
 
   srv.on('loadReleaseState', async () => {
@@ -171,31 +171,10 @@ export default (srv: Service) => {
         const classificationsCount = await getClassificationCount();
         await updateClassificationsFromReleaseStates(
           tx,
-          async (progress) =>
+          async (progress: number) =>
             await updateProgress(25 + (progress / classificationsCount) * 75)
         );
         await updateProgress(100);
-      }
-    );
-  });
-
-  srv.on('exportMissingClassification', async () => {
-    LOG.info('exportMissingClassification');
-    await runAsJob(
-      'Export Missing Classifications',
-      'EXPORT_MISSING_CLASSIFICATION',
-      100,
-      async (tx, updateProgress) => {
-        const missingClassification = await getMissingClassifications();
-        await updateProgress(75);
-        const file = papa.unparse(missingClassification);
-        await updateProgress(100);
-        // Write to file
-        return {
-          file: Buffer.from(file, 'utf8'),
-          fileName: 'missing_classification.csv',
-          fileType: 'application/csv'
-        } as JobResult;
       }
     );
   });
@@ -289,6 +268,14 @@ export default (srv: Service) => {
     }
   );
 
+  srv.before(
+    'READ',
+    ['Destinations', 'Destinations.drafts'],
+    async (req: any) => {
+      await updateDestinations();
+    }
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   srv.on('GET', 'Downloads', async (req: any) => {
     const downloadType = req._.req.path.replace('/Downloads/', '');
@@ -298,19 +285,7 @@ export default (srv: Service) => {
         const mimetype = 'application/zip';
         const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
         const classificationJson = await getClassificationJsonStandard();
-        content = JSON.stringify(classificationJson);
-        content = JSON.stringify(classificationJson, null, 2);
-        // Wrap in ZIP
-        const zip = new JSZip();
-        zip.file(
-          `classification_${dayjs().format('YYYY_MM_DD')}.json`,
-          content
-        );
-        const file = await zip.generateAsync({
-          type: 'nodebuffer',
-          compression: 'DEFLATE',
-          compressionOptions: { level: 7 }
-        });
+        const file = await getClassificationJsonAsZip(classificationJson);
         req.reply(Readable.from([file]), { mimetype, filename });
         break;
       }
@@ -318,39 +293,17 @@ export default (srv: Service) => {
         const mimetype = 'application/zip';
         const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
         const classificationJson = await getClassificationJsonCustom();
-        content = JSON.stringify(classificationJson);
-        content = JSON.stringify(classificationJson, null, 2);
-        // Wrap in ZIP
-        const zip = new JSZip();
-        zip.file(
-          `classification_${dayjs().format('YYYY_MM_DD')}.json`,
-          content
-        );
-        const file = await zip.generateAsync({
-          type: 'nodebuffer',
-          compression: 'DEFLATE',
-          compressionOptions: { level: 7 }
-        });
+        const file = await getClassificationJsonAsZip(classificationJson);
         req.reply(Readable.from([file]), { mimetype, filename });
         break;
       }
       case 'classificationCustomLegacy': {
         const mimetype = 'application/zip';
         const filename = `classification_${dayjs().format('YYYY_MM_DD')}_legacy.zip`;
-        const classificationJson = await getClassificationJsonCustom({ legacy: true });
-        content = JSON.stringify(classificationJson);
-        content = JSON.stringify(classificationJson, null, 2);
-        // Wrap in ZIP
-        const zip = new JSZip();
-        zip.file(
-          `classification_${dayjs().format('YYYY_MM_DD')}.json`,
-          content
-        );
-        const file = await zip.generateAsync({
-          type: 'nodebuffer',
-          compression: 'DEFLATE',
-          compressionOptions: { level: 7 }
+        const classificationJson = await getClassificationJsonCustom({
+          legacy: true
         });
+        const file = await getClassificationJsonAsZip(classificationJson);
         req.reply(Readable.from([file]), { mimetype, filename });
         break;
       }
@@ -358,18 +311,7 @@ export default (srv: Service) => {
         const mimetype = 'application/zip';
         const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
         const classificationJson = await getClassificationJsonCloud();
-        content = JSON.stringify(classificationJson, null, 2);
-        // Wrap in ZIP
-        const zip = new JSZip();
-        zip.file(
-          `classification_${dayjs().format('YYYY_MM_DD')}.json`,
-          content
-        );
-        const file = await zip.generateAsync({
-          type: 'nodebuffer',
-          compression: 'DEFLATE',
-          compressionOptions: { level: 7 }
-        });
+        const file = await getClassificationJsonAsZip(classificationJson);
         req.reply(Readable.from([file]), { mimetype, filename });
         break;
       }
@@ -444,6 +386,32 @@ export default (srv: Service) => {
         objectName,
         successorType
       );
+    }
+  );
+
+  srv.on('syncRatingsToAllSystems', async (req: any) => {
+    LOG.info('syncRatingsToAllSystems');
+    await syncRatingsToExternalSystems();
+    req.notify('SYNC_SUCCESSFUL');
+  });
+
+  srv.on('syncRatings', ['Systems', 'Systems.drafts'], async (req: any) => {
+    await syncRatingsToExternalSystemByRef(req.subject);
+    req.notify('SYNC_SUCCESSFUL');
+  });
+
+  srv.on('syncClassificationsToAllSystems', async (req: any) => {
+    LOG.info('syncRatingsToAllSystems');
+    await syncClassificationsToExternalSystems();
+    req.notify('SYNC_SUCCESSFUL');
+  });
+
+  srv.on(
+    'syncClassifications',
+    ['Systems', 'Systems.drafts'],
+    async (req: any) => {
+      await syncClassificationsToExternalSystemByRef(req.subject);
+      req.notify('SYNC_SUCCESSFUL');
     }
   );
 };

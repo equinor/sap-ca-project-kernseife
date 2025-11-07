@@ -67,6 +67,12 @@ service AdminService @(requires: 'admin') {
     @odata.draft.enabled
     entity Ratings                       as projection on db.Ratings;
 
+    @Common.IsActionCritical: true
+    action syncRatingsToAllSystems();
+
+    @Common.IsActionCritical: true
+    action syncClassificationsToAllSystems();
+
     entity LegacyRatings                 as projection on db.LegacyRatings;
 
     @odata.draft.enabled
@@ -90,7 +96,11 @@ service AdminService @(requires: 'admin') {
     entity Customers                     as projection on db.Customers;
 
     @odata.draft.enabled
-    entity Systems                       as projection on db.Systems;
+    entity Systems                       as projection on db.Systems
+        actions {
+            action syncRatings();
+            action syncClassifications();
+        };
 
     type inDevClass          : {
         devClass : String;
@@ -119,10 +129,10 @@ service AdminService @(requires: 'admin') {
         }
 
     type inInitialData       : {
-        customerTitle     : String(30);
-        contactPerson     : String;
-        prefix            : String(6);
-        configUrl         : String;
+        customerTitle : String(30);
+        contactPerson : String;
+        prefix        : String(6);
+        configUrl     : String;
     }
 
             @odata.draft.enabled
@@ -235,5 +245,7 @@ service AdminService @(requires: 'admin') {
     }
 
     entity FileUpload                    as projection on db.FileUpload;
+
+    entity Destinations                  as projection on db.Destinations;
 
 }

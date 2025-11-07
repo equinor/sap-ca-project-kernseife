@@ -1,10 +1,23 @@
 import {
   Classification,
+  Classifications,
   Import,
   Ratings,
-  ReleaseState
+  ReleaseState,
+  SimplificationItems,
+  System,
+  Systems
 } from '#cds-models/kernseife/db';
-import { Transaction, connect, db, entities, log, utils } from '@sap/cds';
+import dayjs from 'dayjs';
+import {
+  Service,
+  Transaction,
+  connect,
+  db,
+  entities,
+  log,
+  utils
+} from '@sap/cds';
 import { text } from 'node:stream/consumers';
 import papa from 'papaparse';
 import {
@@ -23,6 +36,7 @@ import JSZip from 'jszip';
 import { JobResult } from '../types/file';
 import { PassThrough } from 'node:stream';
 import { streamToBuffer } from '../lib/files';
+import kernseife_btp from '#cds-models/kernseife_btp';
 
 const LOG = log('ClassificationFeature');
 
@@ -31,7 +45,7 @@ export const NO_CLASS = 'NOC';
 export const STANDARD = 'STANDARD';
 export const CUSTOM = 'CUSTOM';
 
-export const mapSubTypeToType = (subType) => {
+export const mapSubTypeToType = (subType: string) => {
   switch (subType) {
     case 'INTTAB':
     case 'TRANSP':
@@ -43,7 +57,7 @@ export const mapSubTypeToType = (subType) => {
   }
 };
 
-export const getAllClassificationColumns = (c) => {
+export const getAllClassificationColumns = (c: any) => {
   c.tadirObjectType,
     c.tadirObjectName,
     c.objectType,
@@ -72,7 +86,7 @@ const getClassificationKey = (classification: ClassificationKey) => {
   );
 };
 
-export const getClassificationState = (classification) => {
+export const getClassificationState = (classification: Classification) => {
   switch (classification.releaseLevel_code) {
     case 'CLASSIC':
       return 'classicAPI';
@@ -92,16 +106,13 @@ export const getClassificationCount = async () => {
 
 export const getClassificationSet = async (): Promise<Set<string>> => {
   // Load all Classifications so we can check if they exist
-  const classificationList = await SELECT.from(
+  const classificationList: Classifications = await SELECT.from(
     entities.Classifications
   ).columns('tadirObjectType', 'tadirObjectName', 'objectType', 'objectName');
-  const classificationSet = await classificationList.reduce(
-    (set, classification) => {
-      set.add(getClassificationKey(classification));
-      return set;
-    },
-    new Set<string>()
-  );
+  const classificationSet = classificationList.reduce((set, classification) => {
+    set.add(getClassificationKey(classification as ClassificationKey));
+    return set;
+  }, new Set<string>());
 
   return classificationSet;
 };
@@ -203,7 +214,7 @@ export const getClassificationRatingAndCommentMap = async (): Promise<
 
 export const updateSimplifications = async (classification: Classification) => {
   // Find Simplification Items for classification
-  const simplificationItems = await SELECT.from(
+  const simplificationItems: SimplificationItems = await SELECT.from(
     entities.SimplificationItems
   ).where({
     objectName: classification.objectName,
@@ -244,7 +255,9 @@ export const updateSimplifications = async (classification: Classification) => {
   return true;
 };
 
-export const updateTotalScoreAndReferenceCount = async (classification) => {
+export const updateTotalScoreAndReferenceCount = async (
+  classification: Classification
+) => {
   const totalScoreResult = await SELECT.from(
     entities.DevelopmentObjectsAggregated
   )
@@ -352,17 +365,17 @@ const getDefaultRatingCode = (classification: Classification) => {
 };
 
 export const getRatingScoreMap = async (): Promise<Map<string, number>> => {
-  const ratingList = await SELECT.from(entities.Ratings, (c) => {
+  const ratingList: Ratings = await SELECT.from(entities.Ratings, (c: any) => {
     c.code, c.score;
   });
   return ratingList.reduce((map, rating) => {
-    map.set(rating.code, rating.score);
+    map.set(rating.code!, rating.score!);
     return map;
   }, new Map<string, number>());
 };
 
 // Can't use the enum, cause CDS TS Support sucks! //TODO Revisit, guess this was fixed
-export const convertCriticalityToMessageType = (criticality) => {
+export const convertCriticalityToMessageType = (criticality: number) => {
   switch (criticality) {
     case 0: // Neutral
       return 'I';
@@ -945,7 +958,7 @@ export const importEnhancementObjectsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const enhancementImport = await SELECT.one
-    .from(entities.Imports, (d) => {
+    .from(entities.Imports, (d: any) => {
       d.ID, d.status, d.title, d.file;
     })
     .where({ ID: enhancementImportId });
@@ -1123,7 +1136,7 @@ export const importExpliticObjectsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const explicitImport = await SELECT.one
-    .from(entities.Imports, (d) => {
+    .from(entities.Imports, (d: any) => {
       d.ID, d.status, d.title, d.file;
     })
     .where({ ID: explicitImportId });
@@ -1136,7 +1149,7 @@ export const importMissingClassificationsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const missingClassificationsImport = await SELECT.one
-    .from(entities.Imports, (d) => {
+    .from(entities.Imports, (d: any) => {
       d.ID, d.status, d.title, d.file, d.defaultRating, d.comment;
     })
     .where({ ID: missingClassificationsImportId });
@@ -1148,17 +1161,20 @@ export const importMissingClassificationsById = async (
 };
 
 export const getClassificationJsonStandard = async () => {
-  const classifications = await SELECT.from(entities.Classifications, (c) => {
-    c.tadirObjectType,
-      c.tadirObjectName,
-      c.objectType,
-      c.objectName,
-      c.softwareComponent,
-      c.applicationComponent,
-      c.releaseLevel_code,
-      c.releaseState((r) => r.labelList),
-      c.successorList();
-  }).where({ releaseLevel_code: { not: { in: ['RELEASED', 'DEPRECATED'] } } });
+  const classifications: Classifications = await SELECT.from(
+    entities.Classifications,
+    (c: any) => {
+      c.tadirObjectType,
+        c.tadirObjectName,
+        c.objectType,
+        c.objectName,
+        c.softwareComponent,
+        c.applicationComponent,
+        c.releaseLevel_code,
+        c.releaseState((r: any) => r.labelList),
+        c.successorList();
+    }
+  ).where({ releaseLevel_code: { not: { in: ['RELEASED', 'DEPRECATED'] } } });
   const classificationJson = {
     formatVersion: '2',
     objectClassifications: classifications.map((classification) => ({
@@ -1173,7 +1189,7 @@ export const getClassificationJsonStandard = async () => {
         (classification.releaseState &&
           classification.releaseState.labelList) ||
         [],
-      successors: classification.successorList.map((successor) => ({
+      successors: classification.successorList!.map((successor) => ({
         tadirObject: successor.tadirObjectType,
         tadirObjName: successor.tadirObjectName,
         objectType: successor.objectType,
@@ -1190,27 +1206,30 @@ export const getClassificationJsonCustom = async (
 ) => {
   let ratings: Ratings = [];
   if (options.legacy) {
-    ratings = await SELECT.from(entities.Ratings, (r) => {
+    ratings = await SELECT.from(entities.Ratings, (r: any) => {
       r.code, r.title, r.criticality_code.as('criticality'), r.score;
     }).where({ usableInClassification: true });
   } else {
-    ratings = await SELECT.from(entities.Ratings, (r) => {
+    ratings = await SELECT.from(entities.Ratings, (r: any) => {
       r.code, r.title, r.criticality_code.as('criticality'), r.score;
     });
   }
 
-  const classifications = await SELECT.from(entities.Classifications, (c) => {
-    c.tadirObjectType,
-      c.tadirObjectName,
-      c.objectType,
-      c.objectName,
-      c.softwareComponent,
-      c.applicationComponent,
-      c.rating_code,
-      c.releaseLevel_code,
-      c.releaseState((r) => r.labelList),
-      c.successorList();
-  });
+  const classifications: Classifications = await SELECT.from(
+    entities.Classifications,
+    (c: any) => {
+      c.tadirObjectType,
+        c.tadirObjectName,
+        c.objectType,
+        c.objectName,
+        c.softwareComponent,
+        c.applicationComponent,
+        c.rating_code,
+        c.releaseLevel_code,
+        c.releaseState((r: any) => r.labelList),
+        c.successorList();
+    }
+  );
   const classificationJson = {
     formatVersion: '1',
     ratings: ratings.map((rating) => ({
@@ -1230,7 +1249,7 @@ export const getClassificationJsonCustom = async (
         classification.releaseState && classification.releaseState.labelList
           ? classification.releaseState.labelList
           : [],
-      successors: classification.successorList.map((successor) => ({
+      successors: classification.successorList!.map((successor) => ({
         tadirObject: successor.tadirObjectType,
         tadirObjName: successor.tadirObjectName,
         objectType: successor.objectType,
@@ -1246,24 +1265,27 @@ export const getClassificationJsonCustom = async (
  * @returns
  */
 export const getClassificationJsonCloud = async () => {
-  const classifications = await SELECT.from(entities.Classifications, (c) => {
-    c.tadirObjectType,
-      c.tadirObjectName,
-      c.objectType,
-      c.objectName,
-      c.subType,
-      c.softwareComponent,
-      c.applicationComponent,
-      c.rating_code,
-      c.releaseLevel_code,
-      c.successorClassification_code,
-      c.adoptionEffort_code,
-      c.comment,
-      c.numberOfSimplificationNotes,
-      c.releaseState((r) => r.labelList),
-      c.successorList(),
-      c.noteList();
-  });
+  const classifications: Classifications = await SELECT.from(
+    entities.Classifications,
+    (c: any) => {
+      c.tadirObjectType,
+        c.tadirObjectName,
+        c.objectType,
+        c.objectName,
+        c.subType,
+        c.softwareComponent,
+        c.applicationComponent,
+        c.rating_code,
+        c.releaseLevel_code,
+        c.successorClassification_code,
+        c.adoptionEffort_code,
+        c.comment,
+        c.numberOfSimplificationNotes,
+        c.releaseState((r: any) => r.labelList),
+        c.successorList(),
+        c.noteList();
+    }
+  );
   //TODO Include Code Samples?
   const classificationJson = {
     formatVersion: '1',
@@ -1294,14 +1316,14 @@ export const getClassificationJsonCloud = async () => {
               }))
             : [],
           successorClassification: classification.successorClassification_code,
-          successorList: classification.successorList.map((successor) => ({
+          successorList: classification.successorList!.map((successor) => ({
             tadirObjectType: successor.tadirObjectType,
             tadirObjectName: successor.tadirObjectName,
             objectType: successor.objectType,
             objectName: successor.objectName,
             successorType: successor.successorType_code
           }))
-        }) as ClassificationImport
+        }) as unknown as ClassificationImport
     )
   };
 
@@ -1309,15 +1331,15 @@ export const getClassificationJsonCloud = async () => {
 };
 
 const getRatingMap = async (): Promise<Map<string, string>> => {
-  const ratingList = await SELECT.from(entities.Ratings, (c) => {
+  const ratingList: Ratings = await SELECT.from(entities.Ratings, (c: any) => {
     c.code, c.legacyRatingList();
   });
   return ratingList.reduce((map, rating) => {
-    for (const legacyRating of rating.legacyRatingList) {
-      map.set(legacyRating.legacyRating, rating.code);
+    for (const legacyRating of rating.legacyRatingList!) {
+      map.set(legacyRating.legacyRating!, rating.code!);
     }
     // also add the current Rating
-    map.set(rating.code, rating.code);
+    map.set(rating.code!, rating.code!);
     return map;
   }, new Map<string, string>());
 };
@@ -1345,7 +1367,7 @@ const assignFramework = async (
   });
 };
 
-export const assignFrameworkByRef = async (ref, code: string) => {
+export const assignFrameworkByRef = async (ref: any, code: string) => {
   const classification = await SELECT.one
     .from(ref)
     .columns(getAllClassificationColumns);
@@ -1393,7 +1415,7 @@ const assignSuccessor = async (
 };
 
 export const assignSuccessorByRef = async (
-  ref,
+  ref: any,
   tadirObjectType: string,
   tadirObjectName: string,
   objectType: string,
@@ -1415,85 +1437,6 @@ export const assignSuccessorByRef = async (
     .from(ref)
     .columns(getAllClassificationColumns);
   return updatedClassification;
-};
-
-const determineSubType = async (
-  objectType: string,
-  objectName: string,
-  objectMetadataApi: any
-) => {
-  if (!objectMetadataApi) return objectType;
-  const { objectMetadata } = objectMetadataApi.entities;
-  // Determine Subtype
-  if (objectType == 'TABL') {
-    try {
-      const result = await objectMetadataApi.run(
-        SELECT(objectMetadata).where({
-          objectType: objectType,
-          objectName: objectName
-        })
-      );
-      if (result && result.length == 1) {
-        return result[0].subType;
-      } else {
-        LOG.error("Can't find Metadata", { objectType, objectName });
-      }
-    } catch (ex) {
-      LOG.error('Error connecting to API_OBJECT_METADATA', ex);
-    }
-  }
-  return objectType;
-};
-
-export const getMissingClassifications = async () => {
-  try {
-    const objectMetadataApi = await connect.to('API_OBJECT_METADATA');
-
-    const releaseStateMap = await getReleaseStateMap();
-    const classificationSet = await getClassificationSet();
-    const classificationList = [] as any[];
-
-    LOG.info(`Classification Count: ${classificationSet.size}`);
-    LOG.info(`ReleaseState Count: ${releaseStateMap.size}`);
-
-    for (const [key, value] of releaseStateMap) {
-      if (
-        !value.objectName ||
-        !value.objectType ||
-        !value.tadirObjectType ||
-        !value.tadirObjectName
-      ) {
-        LOG.warn('Invalid Classification', { value });
-        continue;
-      }
-      if (!classificationSet.has(key)) {
-        const subType = await determineSubType(
-          value.objectType.length > 4
-            ? value.tadirObjectType
-            : value.objectType,
-          value.objectType.length > 4
-            ? value.tadirObjectName
-            : value.objectName,
-          objectMetadataApi
-        );
-
-        // Missing Classification
-        classificationList.push({
-          tadirObjectType: value.tadirObjectType,
-          tadirObjectName: value.tadirObjectName,
-          objectType: value.objectType,
-          objectName: value.objectName,
-          softwareComponent: value.softwareComponent,
-          applicationComponent: value.applicationComponent,
-          subType: subType
-        });
-      }
-    }
-    return classificationList;
-  } catch (ex) {
-    LOG.error('Error connecting to API_OBJECT_METADATA', ex);
-    return [];
-  }
 };
 
 const importClassification = async (
@@ -1599,7 +1542,7 @@ const importClassification = async (
           for (const successor of classificationImport.successorList) {
             // Check if successor already exists
             const existingSuccessor = existingClassification.successorList.find(
-              (s) =>
+              (s: any) =>
                 s.tadirObjectType == successor.tadirObjectType &&
                 s.tadirObjectName == successor.tadirObjectName &&
                 s.objectType == successor.objectType &&
@@ -1764,4 +1707,76 @@ export const importGithubClassificationById = async (
     LOG.error('Error loading ZIP file', { error: e });
     throw new Error('Invalid ZIP file format');
   }
+};
+
+export const getClassificationJsonAsZip = async (classificationJson: any) => {
+  const content = JSON.stringify(classificationJson);
+  // Wrap in ZIP
+  const zip = new JSZip();
+  zip.file(`classification_${dayjs().format('YYYY_MM_DD')}.json`, content);
+  const file = await zip.generateAsync({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 7 }
+  });
+  return file;
+};
+
+export const syncClassificationsToExternalSystemByRef = async (ref: any) => {
+  const system: System = await SELECT.one.from(ref);
+  if (!system || !system.destination) {
+    throw new Error(`System not found or no destination defined for system`);
+  }
+  LOG.info(`Syncing Classifications to System ${system.sid}`);
+  const classificationJson = await getClassificationJsonCustom();
+  LOG.info(
+    `Retrieved Classification JSON with ${classificationJson.objectClassifications.length} entries`
+  );
+  const zipFile = await getClassificationJsonAsZip(classificationJson);
+  LOG.info(
+    `Created ZIP file for Classification JSON, size ${zipFile.length} bytes`
+  );
+  await syncClassificationsToExternalSystem(system, zipFile);
+};
+
+export const syncClassificationsToExternalSystems = async () => {
+  const systemList: Systems = await SELECT.from(entities.Systems).where({
+    destination: { '!=': null }
+  });
+
+  const classificationJson = await getClassificationJsonCustom();
+  const zipFile = await getClassificationJsonAsZip(classificationJson);
+  for (const system of systemList) {
+    await syncClassificationsToExternalSystem(system, zipFile);
+  }
+};
+
+const syncClassificationsToExternalSystem = async (
+  system: System,
+  zipFile: Buffer<ArrayBufferLike>
+) => {
+  const service = (await connect.to('kernseife_btp', {
+    credentials: {
+      destination: system.destination,
+      path: '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001'
+    }
+  })) as Service & { UploadFile: (payload: any) => Promise<void> };
+  LOG.info(
+    `Sending Classification ZIP to System ${system.sid} via Destination ${system.destination}`
+  );
+  const response = await service.send(
+    'POST',
+    '/ZKNSF_I_API_HEADER/com.sap.gateway.srvd.zknsf_btp_connector.v0001.UploadFile',
+    {
+      dummy: true,
+      _StreamProperties: {
+        streamProperty: zipFile.toString('base64'),
+        mimeType: 'application/zip',
+        fileName: 'test1.zip'
+      }
+    }
+  );
+  LOG.info(
+    `Received response from System ${system.sid}: ${JSON.stringify(response)}`
+  );
 };

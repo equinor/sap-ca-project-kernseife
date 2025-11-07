@@ -827,6 +827,34 @@ entity Systems : cuid, managed {
     title       : String;
     comment     : String;
 
+    @Common.ValueListWithFixedValues: true
+    @(Common                        : {
+        Label    : '{i18n>destination}',
+        ValueList: {
+            CollectionPath: 'Destinations',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    ValueListProperty: 'name',
+                    LocalDataProperty: destination,
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'proxyType'
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'type'
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'authentication'
+                },
+            ]
+        }
+    })
+    destination : String;
+
     customer    : Association to Customers
                       on customer.ID = $self.customer_ID;
 
@@ -1015,4 +1043,11 @@ entity ImportTypes {
         defaultRating : Boolean;
         comment       : Boolean;
         fileEndings   : String;
+}
+
+entity Destinations {
+    key name           : String;
+        type           : String;
+        proxyType      : String;
+        authentication : String;
 }
