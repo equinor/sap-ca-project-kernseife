@@ -113,34 +113,11 @@
                             "isGroupLocked": false,
                             "tiles": [
                                 {
-                                    "id": "ConfigureRating",
-                                    "tileType": "sap.ushell.ui.tile.StaticTile",
-                                    "properties": {
-                                        "title": "Configure Rating",
-                                        "targetURL": "#Ratings-configure"
-                                    }
-                                },
-                                {
-                                    "id": "ConfigureFramework",
-                                    "tileType": "sap.ushell.ui.tile.StaticTile",
-                                    "properties": {
-                                        "title": "Configure Framework",
-                                        "targetURL": "#Framework-configure"
-                                    }
-                                },
-                                {
-                                    "id": "ConfigureSystems",
-                                    "tileType": "sap.ushell.ui.tile.StaticTile",
-                                    "properties": {
-                                        "title": "Configure Systems",
-                                        "targetURL": "#Systems-configure"
-                                    }
-                                },
-                                {
                                     "id": "ConfigureDefaults",
                                     "tileType": "sap.ushell.ui.tile.StaticTile",
                                     "properties": {
                                         "title": "Setup",
+                                        "subtitle": "Kernseife",
                                         "targetURL": "#Defaults-configure"
                                     }
                                 }

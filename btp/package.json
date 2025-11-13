@@ -129,16 +129,12 @@
     "app/analyze-score",
     "app/analyze-overview",
     "app/import-center",
-    "app/configure-framework",
-    "app/configure-rating",
-    "app/configure-system",
     "app/configure-default",
     "app/manage-development-object",
     "app/monitor-job",
     "app/manage-release-state",
     "app/manage-classification",
-    "app/manage-extension",
-    "app/configure-default"
+    "app/manage-extension"
   ],
   "workspaces": [
     "app/*",

@@ -105,6 +105,16 @@
           "pattern": "Settings({key}):?query:",
           "name": "SettingsObjectPage",
           "target": "SettingsObjectPage"
+        },
+        {
+          "name": "Settings_customerListObjectPage",
+          "pattern": "Settings({key})/customerList({customerListKey}):?query:",
+          "target": "Settings_customerListObjectPage"
+        },
+        {
+          "pattern": "Settings({key})/systemList({key2}):?query:",
+          "name": "Settings_systemListObjectPage",
+          "target": "Settings_systemListObjectPage"
         }
       ],
       "targets": {
@@ -115,7 +125,68 @@
           "options": {
             "settings": {
               "editableHeaderContent": false,
-              "contextPath": "/Settings"
+              "contextPath": "/Settings",
+              "navigation": {
+                "customerList": {
+                  "detail": {
+                    "route": "Settings_customerListObjectPage"
+                  }
+                },
+                "systemList": {
+                  "detail": {
+                    "route": "Settings_systemListObjectPage"
+                  }
+                },
+                "ratingList": {
+                  "detail": {
+                    "route": "Settings_ratingListObjectPage"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Settings_customerListObjectPage": {
+          "type": "Component",
+          "id": "Settings_customerListObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "navigation": {},
+              "contextPath": "/Settings/customerList"
+            }
+          }
+        },
+        "Settings_systemListObjectPage": {
+          "type": "Component",
+          "id": "Settings_systemListObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "navigation": {},
+              "contextPath": "/Settings/systemList"
+            }
+          }
+        },
+        "Settings_ratingListObjectPage": {
+          "type": "Component",
+          "id": "Settings_ratingListObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "navigation": {},
+              "contextPath": "/Settings/ratingList"
+            }
+          }
+        },
+        "Settings_frameworkListObjectPage": {
+          "type": "Component",
+          "id": "Settings_frameworkListObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "navigation": {},
+              "contextPath": "/Settings/frameworkList"
             }
           }
         }

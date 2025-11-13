@@ -62,18 +62,15 @@ service AdminService @(requires: 'admin') {
                                     @mandatory successorType: inSuccessor:successorType) returns Classifications;
         };
 
-    entity FrameworkUsages               as projection on db.FrameworkUsages;
-    entity ClassificationSuccessors      as projection on db.ClassificationSuccessors;
-
-    @odata.draft.enabled
-    entity Ratings                       as projection on db.Ratings;
-
     @Common.IsActionCritical: true
     action syncClassificationsToAllSystems();
 
-    entity LegacyRatings                 as projection on db.LegacyRatings;
+    entity FrameworkUsages               as projection on db.FrameworkUsages;
+    entity ClassificationSuccessors      as projection on db.ClassificationSuccessors;
 
-    @odata.draft.enabled
+    entity Ratings                       as projection on db.Ratings;
+
+
     entity Frameworks                    as projection on db.Frameworks;
 
     entity FrameworkTypes                as projection on db.FrameworkTypes;
@@ -98,15 +95,16 @@ service AdminService @(requires: 'admin') {
             *
         };
 
-    @odata.draft.enabled
     entity Systems                       as
         projection on db.Systems {
             *,
-            project : Association to Projects
-                              on project.systemId = $self.sid //Not exactly correct, but we need an ON condition here
+            virtual setupDone : Boolean,
+            project           : Association to Projects
+                                    on project.systemId = $self.sid //Not exactly correct, but we need an ON condition here
         }
         actions {
             action syncClassifications();
+            action setupSystem();
         };
 
 
@@ -137,21 +135,14 @@ service AdminService @(requires: 'admin') {
         }
 
     type inInitialData       : {
-        customerTitle : String(30);
-        contactPerson : String;
-        prefix        : String(6);
-        configUrl     : String;
+        configUrl : String;
     }
 
             @odata.draft.enabled
     entity Settings                      as projection on db.Settings
         actions {
             @Common.IsActionCritical: true
-            action createInitialData(
-            @mandatory contactPerson: inInitialData:contactPerson,
-                                     @mandatory prefix: inInitialData:prefix,
-                                     @mandatory customerTitle: inInitialData:customerTitle,
-                                     configUrl: inInitialData:configUrl @UI.ParameterDefaultValue: 'https://raw.githubusercontent.com/SAP/project-kernseife/refs/heads/main/defaultSetup.json'
+            action createInitialData(configUrl: inInitialData:configUrl @UI.ParameterDefaultValue: 'https://raw.githubusercontent.com/SAP/project-kernseife/refs/heads/main/defaultSetup.json'
 
             );
         };

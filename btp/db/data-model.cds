@@ -609,6 +609,7 @@ define view AdoptionEffortValueList as
 
 @cds.persistence.journal
 entity Ratings : cuid, managed {
+    setting                : Association to Settings;
     @mandatory code        : String(20);
     @mandatory title       : String;
     @mandatory score       : Integer;
@@ -617,23 +618,14 @@ entity Ratings : cuid, managed {
 
     @Common.ValueListWithFixedValues: true
     @mandatory criticality : Association to Criticality;
-
-    legacyRatingList       : Composition of many LegacyRatings
-                                 on legacyRatingList.rating = $self;
-
-
 }
 
-@cds.persistence.journal
-entity LegacyRatings : cuid {
-    rating       : Association to Ratings;
-    legacyRating : String(10);
-}
 
 @cds.persistence.journal
 entity Frameworks : cuid, managed {
-    code               : String;
-    title              : String;
+    setting            : Association to Settings;
+    @mandatory code    : String;
+    @mandatory title   : String;
     criticality        : Association to Criticality;
 
     @Common.ValueListWithFixedValues: true
@@ -820,6 +812,8 @@ entity DevelopmentObjectsAggregated as
 
 @cds.persistence.journal
 entity Systems : cuid, managed {
+    setting     : Association to Settings;
+
     @mandatory
     sid         : String;
 
@@ -886,6 +880,8 @@ entity Systems : cuid, managed {
 
 @cds.persistence.journal
 entity Customers : cuid, managed {
+    setting    : Association to Settings;
+
     @mandatory
     title      : String;
     contact    : String;
@@ -913,7 +909,18 @@ entity Extensions : cuid, managed {
 
 @cds.persistence.journal
 entity Settings : managed {
-    key ID : String(36);
+    key ID            : String(36);
+        customerList  : Composition of many Customers
+                            on customerList.setting = $self;
+
+        systemList    : Composition of many Systems
+                            on systemList.setting = $self;
+
+        ratingList    : Composition of many Ratings
+                            on ratingList.setting = $self;
+
+        frameworkList : Composition of many Frameworks
+                            on frameworkList.setting = $self;
 }
 
 @cds.persistence.journal

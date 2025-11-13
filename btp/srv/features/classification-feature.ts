@@ -1329,20 +1329,6 @@ export const getClassificationJsonCloud = async () => {
   return classificationJson;
 };
 
-const getRatingMap = async (): Promise<Map<string, string>> => {
-  const ratingList: Ratings = await SELECT.from(entities.Ratings, (c: any) => {
-    c.code, c.legacyRatingList();
-  });
-  return ratingList.reduce((map, rating) => {
-    for (const legacyRating of rating.legacyRatingList!) {
-      map.set(legacyRating.legacyRating!, rating.code!);
-    }
-    // also add the current Rating
-    map.set(rating.code!, rating.code!);
-    return map;
-  }, new Map<string, string>());
-};
-
 const assignFramework = async (
   classification: Classification,
   code: string
@@ -1441,8 +1427,7 @@ export const assignSuccessorByRef = async (
 const importClassification = async (
   classificationImport: ClassificationImport,
   classificationSet: Set<string>,
-  releaseStateMap: Map<string, ReleaseState>,
-  ratingMap: Map<string, string>
+  releaseStateMap: Map<string, ReleaseState>
 ): Promise<ClassificationImportLog> => {
   // Check if Classification already exists
   const classificationKey = getClassificationKey(classificationImport);
@@ -1461,7 +1446,7 @@ const importClassification = async (
       referenceCount: 0,
       adoptionEffort_code: classificationImport.adoptionEffort,
       comment: classificationImport.comment,
-      rating_code: ratingMap.get(classificationImport.rating) || NO_CLASS,
+      rating_code: classificationImport.rating || NO_CLASS,
       noteList: classificationImport.noteList,
       numberOfSimplificationNotes:
         classificationImport.numberOfSimplificationNotes,
@@ -1512,18 +1497,14 @@ const importClassification = async (
         objectType: classificationImport.objectType,
         objectName: classificationImport.objectName
       });
-    // Merge Rating
+    // Update Rating
     let updated = false;
     let conflict = false;
     const oldRatingCode = existingClassification.rating_code;
     const oldSuccessorClassification =
       existingClassification.successorClassification_code;
-    if (
-      existingClassification.rating_code !=
-      (ratingMap.get(classificationImport.rating) || NO_CLASS)
-    ) {
-      existingClassification.rating_code =
-        ratingMap.get(classificationImport.rating) || NO_CLASS;
+    if (existingClassification.rating_code != classificationImport.rating) {
+      existingClassification.rating_code = classificationImport.rating!;
       updated = true;
     }
     // Merge Successors
@@ -1662,7 +1643,6 @@ export const importGithubClassificationById = async (
     // Get all releaseState
     const releaseStateMap = await getReleaseStateMap();
     // Ratings
-    const ratingMap = await getRatingMap();
     const importLogList: ClassificationImportLog[] = [];
     let processIndex = 0;
     let updateIndex = 0;
@@ -1674,8 +1654,7 @@ export const importGithubClassificationById = async (
       const importLog = await importClassification(
         classification,
         classificationSet,
-        releaseStateMap,
-        ratingMap
+        releaseStateMap
       );
       importLogList.push(importLog);
       processIndex++;
@@ -1754,12 +1733,12 @@ const syncClassificationsToExternalSystem = async (
   system: System,
   zipFile: Buffer<ArrayBufferLike>
 ) => {
-  const service = (await connect.to('kernseife_btp', {
+  const service = await connect.to('kernseife_btp', {
     credentials: {
       destination: system.destination,
       path: '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001'
     }
-  })) as Service & { UploadFile: (payload: any) => Promise<void> };
+  });
   LOG.info(
     `Sending Classification ZIP to System ${system.sid} via Destination ${system.destination}`
   );

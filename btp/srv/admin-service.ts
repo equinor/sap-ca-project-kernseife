@@ -33,10 +33,10 @@ import {
   loadReleaseState,
   updateClassificationsFromReleaseStates
 } from './features/releaseState-feature';
-import { createInitialData } from './features/setup-feature';
+import { createInitialData, setupSystem } from './features/setup-feature';
 import { uploadFile } from './features/upload-feature';
 import JSZip from 'jszip';
-import { updateDestinations } from './lib/connectivity';
+import { handleMessage, updateDestinations } from './lib/connectivity';
 
 export default (srv: Service) => {
   const LOG = log('AdminService');
@@ -145,14 +145,8 @@ export default (srv: Service) => {
 
   srv.on('createInitialData', ['Settings', 'Settings.drafts'], async (req) => {
     LOG.info('createInitialData');
-    const contactPerson = req.data.contactPerson;
-    const prefix = req.data.prefix;
-    const customerTitle = req.data.customerTitle;
-    if (!contactPerson || !prefix || !customerTitle) {
-      return req.error(400, `Missing mandatory parameter`);
-    }
     const configUrl = req.data.configUrl;
-    await createInitialData(contactPerson, prefix, customerTitle, configUrl);
+    await createInitialData(configUrl);
   });
 
   srv.on('loadReleaseState', async () => {
@@ -400,30 +394,15 @@ export default (srv: Service) => {
     }
   );
 
-  srv.on('READ', ['Projects', 'Projects.drafts'], async (req) => {
-    // Read Destination via System
-    const system = (await SELECT.one
-      .from({ ref: [req.subject.ref[0]] })
-      .columns('destination')) as any;
-
-    if (!system || !system.destination) {
-      // No Destination => no Project
-      return [];
-    }
-
-    const btp = await connect.to('kernseife_btp', {
-      credentials: {
-        destination: system.destination,
-        path: '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001'
-      }
-    });
-    const projectList = await btp.run(SELECT('ZKNSF_I_PROJECTS'));
-    return projectList;
+  srv.on('setupSystem', ['Systems', 'Systems.drafts'], async (req: any) => {
+    const message = await setupSystem(req.subject);
+    handleMessage(req, message);
   });
 
   // Read Project via System
   srv.after('READ', ['Systems', 'Systems.drafts'], async (Systems, req) => {
     for (const system of Systems as any[]) {
+      system.setupDone = false;
       if (system.destination) {
         const btp = await connect.to('kernseife_btp', {
           credentials: {
@@ -434,6 +413,7 @@ export default (srv: Service) => {
         const projectList = await btp.run(SELECT('ZKNSF_I_PROJECTS'));
         if (projectList && projectList.length == 1) {
           system.project = projectList[0];
+          system.setupDone = true;
         }
       }
     }
