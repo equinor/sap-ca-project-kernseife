@@ -69,8 +69,6 @@ service AdminService @(requires: 'admin') {
     entity ClassificationSuccessors      as projection on db.ClassificationSuccessors;
 
     entity Ratings                       as projection on db.Ratings;
-
-
     entity Frameworks                    as projection on db.Frameworks;
 
     entity FrameworkTypes                as projection on db.FrameworkTypes;

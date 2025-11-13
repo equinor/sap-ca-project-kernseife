@@ -1,7 +1,7 @@
 {
   "_version": "1.65.0",
   "sap.app": {
-    "id": "configuredefault",
+    "id": "configuresetting",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -27,8 +27,8 @@
     },
     "crossNavigation": {
       "inbounds": {
-        "Rating-configure": {
-          "semanticObject": "Defaults",
+        "Settings-configure": {
+          "semanticObject": "Settings",
           "action": "configure",
           "title": "{{flpTitle}}",
           "subTitle": "{{flpSubtitle}}",
@@ -67,7 +67,8 @@
       "libs": {
         "sap.m": {},
         "sap.ui.core": {},
-        "sap.fe.templates": {}
+        "sap.fe.templates": {},
+        "sap.f": {}
       }
     },
     "contentDensities": {
@@ -78,7 +79,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "configuredefault.i18n.i18n"
+          "bundleName": "configuresetting.i18n.i18n"
         }
       },
       "": {
@@ -99,22 +100,52 @@
       "css": []
     },
     "routing": {
-      "config": {},
+      "config": {
+        "flexibleColumnLayout": {
+          "defaultTwoColumnLayoutType": "TwoColumnsBeginExpanded",
+          "defaultThreeColumnLayoutType": "ThreeColumnsMidExpanded"
+        },
+        "routerClass": "sap.f.routing.Router"
+      },
       "routes": [
         {
           "pattern": "Settings({key}):?query:",
           "name": "SettingsObjectPage",
-          "target": "SettingsObjectPage"
+          "target": [
+            "SettingsObjectPage"
+          ]
         },
         {
           "name": "Settings_customerListObjectPage",
           "pattern": "Settings({key})/customerList({customerListKey}):?query:",
-          "target": "Settings_customerListObjectPage"
+          "target": [
+            "SettingsObjectPage",
+            "Settings_customerListObjectPage"
+          ]
         },
         {
           "pattern": "Settings({key})/systemList({key2}):?query:",
           "name": "Settings_systemListObjectPage",
-          "target": "Settings_systemListObjectPage"
+          "target": [
+            "SettingsObjectPage",
+            "Settings_systemListObjectPage"
+          ]
+        },
+        {
+          "pattern": "Settings({key})/ratingList({key2}):?query:",
+          "name": "Settings_ratingListObjectPage",
+          "target": [
+            "SettingsObjectPage",
+            "Settings_ratingListObjectPage"
+          ]
+        },
+        {
+          "pattern": "Settings({key})/frameworkList({key2}):?query:",
+          "name": "Settings_frameworkListObjectPage",
+          "target": [
+            "SettingsObjectPage",
+            "Settings_frameworkListObjectPage"
+          ]
         }
       ],
       "targets": {
@@ -141,10 +172,17 @@
                   "detail": {
                     "route": "Settings_ratingListObjectPage"
                   }
+                },
+                "frameworkList": {
+                  "detail": {
+                    "route": "Settings_frameworkListObjectPage"
+                  }
                 }
               }
             }
-          }
+          },
+          "controlAggregation": "beginColumnPages",
+          "contextPattern": "/Settings({key})"
         },
         "Settings_customerListObjectPage": {
           "type": "Component",
@@ -155,7 +193,9 @@
               "navigation": {},
               "contextPath": "/Settings/customerList"
             }
-          }
+          },
+          "controlAggregation": "midColumnPages",
+          "contextPattern": "/Settings({key})/customerList({customerListKey})"
         },
         "Settings_systemListObjectPage": {
           "type": "Component",
@@ -166,7 +206,9 @@
               "navigation": {},
               "contextPath": "/Settings/systemList"
             }
-          }
+          },
+          "controlAggregation": "midColumnPages",
+          "contextPattern": "/Settings({key})/systemList({key2})"
         },
         "Settings_ratingListObjectPage": {
           "type": "Component",
@@ -175,9 +217,11 @@
           "options": {
             "settings": {
               "navigation": {},
-              "contextPath": "/Settings/ratingList"
+              "contextPath": "/Ratings"
             }
-          }
+          },
+          "controlAggregation": "midColumnPages",
+          "contextPattern": "/Settings({key})/ratingList({key2})"
         },
         "Settings_frameworkListObjectPage": {
           "type": "Component",
@@ -188,9 +232,17 @@
               "navigation": {},
               "contextPath": "/Settings/frameworkList"
             }
-          }
+          },
+          "controlAggregation": "midColumnPages",
+          "contextPattern": "/Settings({key})/frameworkList({key2})"
         }
       }
+    },
+    "rootView": {
+      "viewName": "sap.fe.templates.RootContainer.view.Fcl",
+      "type": "XML",
+      "async": true,
+      "id": "appRootView"
     }
   },
   "sap.fiori": {

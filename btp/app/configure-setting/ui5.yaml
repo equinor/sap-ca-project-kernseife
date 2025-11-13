@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
 specVersion: "3.1"
 metadata:
-  name: configuredefault
+  name: configuresetting
 type: application
 
 resources:
@@ -17,7 +17,7 @@ builder:
     - name: ui5-task-zipper
       afterTask: generateCachebusterInfo
       configuration:
-        archiveName: configure-default
+        archiveName: configure-setting
         additionalFiles:
           - xs-app.json
 

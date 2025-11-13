@@ -84,36 +84,77 @@ annotate service.Customers with @(UI.LineItem: [
     {
         $Type: 'UI.DataField',
         Value: title,
-        Label: 'title',
+        Label: '{i18n>title}',
     },
     {
         $Type: 'UI.DataField',
         Value: prefix,
-        Label: 'prefix',
+        Label: '{i18n>prefix}',
     },
     {
         $Type: 'UI.DataField',
         Value: contact,
-        Label: 'contact',
-    },
-    {
-        $Type: 'UI.DataField',
-        Value: createdBy,
-    },
-    {
-        $Type: 'UI.DataField',
-        Value: createdAt,
-    },
-    {
-        $Type: 'UI.DataField',
-        Value: modifiedAt,
-    },
-    {
-        $Type: 'UI.DataField',
-        Value: modifiedBy,
-    },
+        Label: '{i18n>contactPerson}'
+    }
 ]);
 
+annotate service.Customers with @(UI.HeaderInfo: {
+    TypeName      : '{i18n>customer}',
+    TypeNamePlural: '{i18n>customes}',
+    Title         : {
+        $Type: 'UI.DataField',
+        Value: title,
+        Label: '{i18n>title}',
+    },
+});
+
+
+annotate AdminService.Customers with @(UI: {
+    Facets             : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>generalInformation}',
+            Target: '@UI.FieldGroup#General'
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>admin}',
+            Target: '@UI.FieldGroup#Admin'
+        }
+    ],
+    FieldGroup #General: {Data: [
+        {
+            Value: title,
+            Label: '{i18n>title}',
+        },
+        {
+            Value: prefix,
+            Label: '{i18n>sid}',
+        },
+        {
+            Value: contact,
+            Label: '{i18n>contactPerson}'
+        }
+    ]},
+    FieldGroup #Admin  : {Data: [
+        {
+            Value: createdBy,
+            Label: '{i18n>createdBy}',
+        },
+        {
+            Value: createdAt,
+            Label: '{i18n>createdAt}',
+        },
+        {
+            Value: modifiedBy,
+            Label: '{i18n>modifiedBy}',
+        },
+        {
+            Value: modifiedAt,
+            Label: '{i18n>modifiedAt}',
+        }
+    ]}
+});
 
 annotate AdminService.Systems with @(
     UI               : {
@@ -371,7 +412,6 @@ annotate service.Ratings with @(UI.HeaderInfo: {
         Label: '{i18n>title}',
     },
 });
-
 
 annotate AdminService.Frameworks with @(UI: {
     Facets             : [

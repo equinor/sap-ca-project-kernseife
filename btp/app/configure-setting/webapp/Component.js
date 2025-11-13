@@ -3,13 +3,13 @@ sap.ui.define(
     function (Component) {
         "use strict";
 
-        return Component.extend("configuredefault.Component", {
+        return Component.extend("configuresetting.Component", {
             metadata: {
                 manifest: "json"
             },
             init: function (...args) {
                 Component.prototype.init.apply(this, ...args);
-                this.getRouter().navTo("SettingsObjectPage", { key: "ID=1,IsActiveEntity=true" }, true);
+                this.getRouter().navTo("SettingsObjectPage", { key: "ID='1',IsActiveEntity=true" }, true);
             }
         });
     }

@@ -1,7 +1,7 @@
 {
-  "name": "configure-default",
+  "name": "configure-setting",
   "version": "1.0.1",
-  "description": "Configure Defaults App",
+  "description": "Configure Settings App",
   "keywords": [
     "ui5",
     "openui5",

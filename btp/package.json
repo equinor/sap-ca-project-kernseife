@@ -129,7 +129,7 @@
     "app/analyze-score",
     "app/analyze-overview",
     "app/import-center",
-    "app/configure-default",
+    "app/configure-setting",
     "app/manage-development-object",
     "app/monitor-job",
     "app/manage-release-state",

@@ -124,9 +124,9 @@ modules:
           artifacts:
             - analyze-overview.zip
           target-path: resources/
-        - name: configure-default-app
+        - name: configure-setting-app
           artifacts:
-            - configure-default.zip
+            - configure-setting.zip
           target-path: resources/
   - name: kernseife-destination-content
     type: com.sap.application.content
@@ -267,47 +267,11 @@ modules:
         - npm run build
       supported-platforms: []
 
-  # ------------- APPLICATION: Framework Config ----------------
-  - name: configure-framework-app
-    # ------------------------------------------------------------
-    type: html5
-    path: app/configure-framework
-    build-parameters:
-      build-result: dist
-      builder: custom
-      commands:
-        - npm run build
-      supported-platforms: []
-
-  # ------------- APPLICATION: Rating Config ----------------
-  - name: configure-rating-app
-    # ------------------------------------------------------------
-    type: html5
-    path: app/configure-rating
-    build-parameters:
-      build-result: dist
-      builder: custom
-      commands:
-        - npm run build
-      supported-platforms: []
-
-  # ------------- APPLICATION: System Config ----------------
-  - name: configure-system-app
-    # ------------------------------------------------------------
-    type: html5
-    path: app/configure-system
-    build-parameters:
-      build-result: dist
-      builder: custom
-      commands:
-        - npm run build
-      supported-platforms: []
-
   # ------------- APPLICATION: Default Config ----------------
-  - name: configure-default-app
+  - name: configure-setting-app
     # ------------------------------------------------------------
     type: html5
-    path: app/configure-default
+    path: app/configure-setting
     build-parameters:
       build-result: dist
       builder: custom

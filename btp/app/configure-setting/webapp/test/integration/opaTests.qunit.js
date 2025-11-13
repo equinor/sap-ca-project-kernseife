@@ -1,15 +1,15 @@
 sap.ui.require(
     [
         'sap/fe/test/JourneyRunner',
-        'configuredefault/test/integration/FirstJourney',
-		'configuredefault/test/integration/pages/SettingsList',
-		'configuredefault/test/integration/pages/SettingsObjectPage'
+        'configuresetting/test/integration/FirstJourney',
+		'configuresetting/test/integration/pages/SettingsList',
+		'configuresetting/test/integration/pages/SettingsObjectPage'
     ],
     function(JourneyRunner, opaJourney, SettingsList, SettingsObjectPage) {
         'use strict';
         var JourneyRunner = new JourneyRunner({
             // start index.html in web folder
-            launchUrl: sap.ui.require.toUrl('configuredefault') + '/index.html'
+            launchUrl: sap.ui.require.toUrl('configuresetting') + '/index.html'
         });
 
        

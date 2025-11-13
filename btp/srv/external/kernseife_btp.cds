@@ -198,7 +198,6 @@ service kernseife_btp {
   @cds.external : true
   @cds.persistence.skip : true
   @Common.Label : 'Kernseife: Project'
-  @Common.Messages : SAP__Messages
   @Capabilities.NavigationRestrictions.RestrictedProperties : [
     {
       NavigationProperty: _developmentObjects,
