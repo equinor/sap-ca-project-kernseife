@@ -857,6 +857,61 @@
       },
       "@cds.persistence.name": "KERNSEIFE_DB_JOBS"
     },
+    "kernseife.db.Exports": {
+      "kind": "entity",
+      "@cds.persistence.journal": true,
+      "elements": {
+        "ID": {
+          "key": true,
+          "type": "cds.String",
+          "length": 36,
+          "@cds.persistence.name": "ID"
+        },
+        "createdAt": {
+          "type": "cds.Timestamp",
+          "@cds.persistence.name": "CREATEDAT"
+        },
+        "createdBy": {
+          "type": "cds.String",
+          "length": 255,
+          "@cds.persistence.name": "CREATEDBY"
+        },
+        "modifiedAt": {
+          "type": "cds.Timestamp",
+          "@cds.persistence.name": "MODIFIEDAT"
+        },
+        "modifiedBy": {
+          "type": "cds.String",
+          "length": 255,
+          "@cds.persistence.name": "MODIFIEDBY"
+        },
+        "type": {
+          "type": "cds.String",
+          "length": 5000,
+          "@cds.persistence.name": "TYPE"
+        },
+        "file": {
+          "type": "cds.LargeBinary",
+          "@cds.persistence.name": "FILE"
+        },
+        "fileType": {
+          "type": "cds.String",
+          "length": 5000,
+          "@cds.persistence.name": "FILETYPE"
+        },
+        "fileName": {
+          "type": "cds.String",
+          "length": 5000,
+          "@cds.persistence.name": "FILENAME"
+        },
+        "job_ID": {
+          "type": "cds.String",
+          "length": 36,
+          "@cds.persistence.name": "JOB_ID"
+        }
+      },
+      "@cds.persistence.name": "KERNSEIFE_DB_EXPORTS"
+    },
     "kernseife.db.Classifications": {
       "kind": "entity",
       "@cds.persistence.journal": true,
@@ -1282,61 +1337,6 @@
       },
       "@cds.persistence.name": "KERNSEIFE_DB_OBJECTTYPES"
     },
-    "kernseife.db.Exports": {
-      "kind": "entity",
-      "@cds.persistence.journal": true,
-      "elements": {
-        "ID": {
-          "key": true,
-          "type": "cds.String",
-          "length": 36,
-          "@cds.persistence.name": "ID"
-        },
-        "createdAt": {
-          "type": "cds.Timestamp",
-          "@cds.persistence.name": "CREATEDAT"
-        },
-        "createdBy": {
-          "type": "cds.String",
-          "length": 255,
-          "@cds.persistence.name": "CREATEDBY"
-        },
-        "modifiedAt": {
-          "type": "cds.Timestamp",
-          "@cds.persistence.name": "MODIFIEDAT"
-        },
-        "modifiedBy": {
-          "type": "cds.String",
-          "length": 255,
-          "@cds.persistence.name": "MODIFIEDBY"
-        },
-        "type": {
-          "type": "cds.String",
-          "length": 5000,
-          "@cds.persistence.name": "TYPE"
-        },
-        "file": {
-          "type": "cds.LargeBinary",
-          "@cds.persistence.name": "FILE"
-        },
-        "fileType": {
-          "type": "cds.String",
-          "length": 5000,
-          "@cds.persistence.name": "FILETYPE"
-        },
-        "fileName": {
-          "type": "cds.String",
-          "length": 5000,
-          "@cds.persistence.name": "FILENAME"
-        },
-        "job_ID": {
-          "type": "cds.String",
-          "length": 36,
-          "@cds.persistence.name": "JOB_ID"
-        }
-      },
-      "@cds.persistence.name": "KERNSEIFE_DB_EXPORTS"
-    },
     "kernseife.db.Modifications": {
       "kind": "entity",
       "@cds.persistence.journal": true,
@@ -1455,16 +1455,6 @@
       "@cds.persistence.name": "KERNSEIFE_DB_ENHANCEMENTS"
     }
   },
-  "extensions": [
-    {
-      "annotate": "AdminService.Jobs",
-      "elements": {
-        "file": {
-          "@Common.Label": "{i18n>file}"
-        }
-      }
-    }
-  ],
   "meta": {
     "creator": "CDS Compiler v6.4.2",
     "flavor": "inferred",
