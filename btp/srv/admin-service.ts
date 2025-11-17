@@ -329,8 +329,8 @@ export default (srv: Service) => {
   srv.after('READ', ['Jobs'], async (jobs, req) => {
     for (const job of jobs as Jobs) {
       // Check if Job has Imports
-      job.hideImports = !await jobHasImports(job.ID!);
-      job.hideExports = !await jobHasExports(job.ID!);
+      job.hideImports = !(await jobHasImports(job.ID!));
+      job.hideExports = !(await jobHasExports(job.ID!));
     }
   });
 
@@ -363,14 +363,21 @@ export default (srv: Service) => {
             const fileType = 'application/zip';
             const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
             const count = await getClassificationCount();
-            let offset = 0;
+            let offset = 4;
             const rowSize = 1000;
             let classificationList;
             do {
+              const progress = Math.round((100 / count) * rowSize * offset);
+              LOG.info(`Export External Classifications (${progress}%)`);
+
+              const iterationStartTime = dayjs();
               classificationList = await getClassificationJsonExternal(
                 rowSize,
-                offset
+                offset * rowSize
               );
+              const iterationDuration1 = dayjs().diff(iterationStartTime, 'ms');
+              LOG.info(`Read completed in ${iterationDuration1}ms`);
+              if (tx) tx.commit(); // Commit Read
               for (const classification of classificationList) {
                 if (
                   classification.tadirObjectType ===
@@ -389,8 +396,7 @@ export default (srv: Service) => {
                 }
               }
               offset++;
-              const progress = (100 / count) * rowSize * offset;
-              LOG.info(`Export External Classifications (${progress}%)`);
+
               await updateProgress(progress);
             } while (classificationList.length == rowSize);
 
