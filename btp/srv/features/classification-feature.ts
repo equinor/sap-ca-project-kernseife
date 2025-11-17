@@ -952,8 +952,8 @@ export const importEnhancementObjectsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const enhancementImport = await SELECT.one
-    .from(entities.Imports, (d: any) => {
-      d.ID, d.status, d.title, d.file;
+    .from(entities.Imports, (d: Import) => {
+      d.ID, d.title, d.file;
     })
     .where({ ID: enhancementImportId });
   return await importEnhancementObjects(enhancementImport, tx, updateProgress);
@@ -1132,8 +1132,8 @@ export const importExpliticObjectsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const explicitImport = await SELECT.one
-    .from(entities.Imports, (d: any) => {
-      d.ID, d.status, d.title, d.file;
+    .from(entities.Imports, (d: Import) => {
+      d.ID, d.title, d.file;
     })
     .where({ ID: explicitImportId });
   return await importExplicitObjects(explicitImport, tx, updateProgress);
@@ -1145,8 +1145,8 @@ export const importMissingClassificationsById = async (
   updateProgress?: (progress: number) => Promise<void>
 ) => {
   const missingClassificationsImport = await SELECT.one
-    .from(entities.Imports, (d: any) => {
-      d.ID, d.status, d.title, d.file, d.defaultRating, d.comment;
+    .from(entities.Imports, (d: Import) => {
+      d.ID, d.title, d.file, d.defaultRating, d.comment;
     })
     .where({ ID: missingClassificationsImportId });
   return await importMissingClassifications(
@@ -1600,8 +1600,8 @@ export const importGithubClassificationById = async (
 ) => {
   // Unzip the file
   const githubImport = await SELECT.one
-    .from(entities.Imports, (d: any) => {
-      d.ID, d.status, d.title, d.file, d.systemId, d.overwrite;
+    .from(entities.Imports, (d: Import) => {
+      d.ID, d.title, d.file, d.systemId, d.overwrite;
     })
     .where({ ID: classificationImportId });
   const zip = new JSZip();

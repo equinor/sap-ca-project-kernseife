@@ -350,7 +350,7 @@ export default (srv: Service) => {
         switch (exportType) {
           case 'SYSTEM_CLASSIFICATION': {
             const fileType = 'application/zip';
-            const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
+            const filename = `system_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
             const classificationJson = await getClassificationJsonCustom({
               legacy
             });
@@ -361,7 +361,7 @@ export default (srv: Service) => {
             // Wrap in ZIP
             const zip = new JSZip();
             const fileType = 'application/zip';
-            const filename = `classification_${dayjs().format('YYYY_MM_DD')}.zip`;
+            const filename = `external_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
             const count = await getClassificationCount();
             let offset = 4;
             const rowSize = 1000;
