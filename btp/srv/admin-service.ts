@@ -12,7 +12,7 @@ import {
   getClassificationJsonCustom,
   importEnhancementObjectsById,
   importExpliticObjectsById,
-  importGithubClassificationById,
+  importExternalClassificationById,
   importMissingClassificationsById,
   syncClassificationsToExternalSystemByRef,
   syncClassificationsToExternalSystems
@@ -43,6 +43,7 @@ import {
 import { createInitialData, setupSystem } from './features/setup-feature';
 import JSZip from 'jszip';
 import { handleMessage, updateDestinations } from './lib/connectivity';
+import { timeStamp } from 'console';
 
 export default (srv: Service) => {
   const LOG = log('AdminService');
@@ -204,8 +205,8 @@ export default (srv: Service) => {
             return await importEnhancementObjectsById(ID, tx, updateProgress);
           case 'EXPLICIT':
             return await importExpliticObjectsById(ID, tx, updateProgress);
-          case 'GITHUB_CLASSIFICATION':
-            return await importGithubClassificationById(ID, tx, updateProgress);
+          case 'EXTERNAL_CLASSIFICATION':
+            return await importExternalClassificationById(ID, tx, updateProgress);
           default:
             LOG.error(`Unknown Import Type ${importType}`);
             throw new Error(`Unknown Import Type ${importType}`);
@@ -351,32 +352,32 @@ export default (srv: Service) => {
           case 'SYSTEM_CLASSIFICATION': {
             const fileType = 'application/zip';
             const filename = `system_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
+            await updateProgress(15);
             const classificationJson = await getClassificationJsonCustom({
               legacy
             });
+            await updateProgress(85);
             const file = await getClassificationJsonAsZip(classificationJson);
+            await updateProgress(100);
             return [await createExport(exportType, filename, file, fileType)];
           }
           case 'EXTERNAL_CLASSIFICATION': {
             // Wrap in ZIP
-            const zip = new JSZip();
-            const fileType = 'application/zip';
-            const filename = `external_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
-            const count = await getClassificationCount();
-            let offset = 4;
-            const rowSize = 1000;
-            let classificationList;
-            do {
-              const progress = Math.round((100 / count) * rowSize * offset);
-              LOG.info(`Export External Classifications (${progress}%)`);
 
-              const iterationStartTime = dayjs();
+            const count = await getClassificationCount();
+            let offset = 0;
+            const rowSize = 50000;
+            let classificationList;
+            const exportList: string[] = [];
+            do {
+              const zip = new JSZip();
+              const fileType = 'application/zip';
+              const filename = `external_classification_${dayjs().format('YYYY_MM_DD')}_${offset + 1}.zip`;
+              const progress = Math.round((100 / count) * rowSize * offset);
               classificationList = await getClassificationJsonExternal(
                 rowSize,
                 offset * rowSize
               );
-              const iterationDuration1 = dayjs().diff(iterationStartTime, 'ms');
-              LOG.info(`Read completed in ${iterationDuration1}ms`);
               if (tx) tx.commit(); // Commit Read
               for (const classification of classificationList) {
                 if (
@@ -398,22 +399,25 @@ export default (srv: Service) => {
               offset++;
 
               await updateProgress(progress);
+
+              LOG.info('Generate Zip - Start ' + Object.keys(zip.files).length);
+              const file = await zip.generateAsync({
+                streamFiles: true,
+                type: 'nodebuffer',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 7 }
+              });
+
+              LOG.info('Generate Zip - Finish');
+
+              exportList.push(
+                await createExport(exportType, filename, file, fileType)
+              );
+              if (tx) tx.commit();
             } while (classificationList.length == rowSize);
 
-            const file = await zip.generateAsync({
-              type: 'nodebuffer',
-              compression: 'DEFLATE',
-              compressionOptions: { level: 7 }
-            });
-
             await updateProgress(100);
-
-            const result = [
-              await createExport(exportType, filename, file, fileType)
-            ];
-
-            if (tx) tx.commit();
-            return result;
+            return exportList;
           }
           default:
             LOG.error(`Unknown Export Type ${exportType}`);

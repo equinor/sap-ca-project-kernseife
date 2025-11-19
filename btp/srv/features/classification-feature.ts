@@ -1264,7 +1264,7 @@ export const getClassificationJsonExternal = async (
   rows: number,
   offset: number
 ) => {
-  LOG.info(`Read ${rows} Classifications (Offset: ${offset})`);
+//  LOG.info(`Read ${rows} Classifications (Offset: ${offset})`);
   const classifications: Classifications = await SELECT.from(
     entities.Classifications,
     (c: any) => {
@@ -1593,13 +1593,13 @@ const importClassification = async (
   }
 };
 
-export const importGithubClassificationById = async (
+export const importExternalClassificationById = async (
   classificationImportId: string,
   tx: Transaction,
   updateProgress: (progress: number) => Promise<void>
 ) => {
   // Unzip the file
-  const githubImport = await SELECT.one
+  const externalImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
       d.ID, d.title, d.file, d.systemId, d.overwrite;
     })
@@ -1607,7 +1607,7 @@ export const importGithubClassificationById = async (
   const zip = new JSZip();
 
   const stream = new PassThrough();
-  githubImport.file.pipe(stream);
+  externalImport.file.pipe(stream);
   const buffer = await streamToBuffer(stream);
 
   try {
@@ -1629,7 +1629,7 @@ export const importGithubClassificationById = async (
         classification,
         classificationSet,
         releaseStateMap,
-        githubImport.overwrite || false
+        externalImport.overwrite || false
       );
       importLogList.push(importLog);
       processIndex++;

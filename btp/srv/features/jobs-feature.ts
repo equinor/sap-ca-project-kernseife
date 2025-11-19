@@ -173,7 +173,7 @@ export const uploadFile = async (
       break;
     case 'EXPLICIT':
       break;
-    case 'GITHUB_CLASSIFICATION':
+    case 'EXTERNAL_CLASSIFICATION':
       fileType = 'application/zip';
       break;
     default:
