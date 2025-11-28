@@ -237,4 +237,6 @@ service AdminService @(requires: 'admin') {
 
     entity Destinations                  as projection on db.Destinations;
 
+    entity JobStatus                     as projection on db.JobStatus;
+    entity JobTypes                      as projection on db.JobTypes;
 }

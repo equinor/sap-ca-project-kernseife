@@ -853,6 +853,11 @@
         "progressTotal": {
           "type": "cds.Integer",
           "@cds.persistence.name": "PROGRESSTOTAL"
+        },
+        "message": {
+          "type": "cds.String",
+          "length": 5000,
+          "@cds.persistence.name": "MESSAGE"
         }
       },
       "@cds.persistence.name": "KERNSEIFE_DB_JOBS"
