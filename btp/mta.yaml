@@ -291,6 +291,10 @@ resources:
             description: Kernseife Admin
             role-template-references:
               - $XSAPPNAME.admin
+          - name: 'kernseife-viewer-${space}'
+            description: Kernseife Viewer
+            role-template-references:
+              - $XSAPPNAME.viewer
 
   # ------------------------------------------------------------
   - name: kernseife-html5-repo-host
