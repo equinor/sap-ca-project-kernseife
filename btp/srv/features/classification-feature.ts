@@ -1221,18 +1221,28 @@ export const getClassificationJsonStandard = async () => {
 };
 
 export const getClassificationJsonCustom = async (
-  options: { legacy: boolean } = { legacy: false }
+  options: { legacy: boolean; dateFrom: string | null | undefined } = {
+    legacy: false,
+    dateFrom: undefined
+  }
 ) => {
   let ratings: Ratings = [];
+  let whereClause: any = {};
+
   if (options.legacy) {
-    ratings = await SELECT.from(entities.Ratings, (r: any) => {
-      r.code, r.title, r.criticality_code.as('criticality'), r.score;
-    }).where({ usableInClassification: true });
-  } else {
-    ratings = await SELECT.from(entities.Ratings, (r: any) => {
-      r.code, r.title, r.criticality_code.as('criticality'), r.score;
-    });
+    whereClause = { usableInClassification: true };
   }
+
+  if (options.dateFrom) {
+    whereClause = {
+      ...whereClause,
+      modifiedAt: { '>=': options.dateFrom }
+    };
+  }
+
+  ratings = await SELECT.from(entities.Ratings, (r: any) => {
+    r.code, r.title, r.criticality_code.as('criticality'), r.score;
+  }).where(whereClause);
 
   const classifications: Classifications = await SELECT.from(
     entities.Classifications,

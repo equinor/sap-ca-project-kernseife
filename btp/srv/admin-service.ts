@@ -341,7 +341,7 @@ export default (srv: Service) => {
 
   srv.on('triggerExport', async (req: any) => {
     LOG.info('Trigger Export', req.data);
-    const { exportType, legacy } = req.data;
+    const { exportType, legacy, dateFrom } = req.data;
 
     await runAsJob(
       `Export ${exportType}`,
@@ -358,7 +358,7 @@ export default (srv: Service) => {
             const filename = `system_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
             await updateProgress(15);
             const classificationJson = await getClassificationJsonCustom({
-              legacy
+              legacy, dateFrom
             });
             await updateProgress(85);
             const file = await getClassificationJsonAsZip(classificationJson);
