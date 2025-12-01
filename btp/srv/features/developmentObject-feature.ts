@@ -13,6 +13,8 @@ import {
   getSuccessorRatingMap
 } from './classification-feature';
 import { supportslanguageVersions } from '../lib/languageVersions';
+import { JobResult } from '../types/jobs';
+import { Job } from '#cds-models/AdminService';
 
 const LOG = log('DevelopmentObjectFeature');
 
@@ -47,20 +49,21 @@ export const calculateScoreByRef = async (ref: any) => {
   const developmentObject = await SELECT.one.from(ref);
 
   // Get Latest Scoring Run
-  const findingRecordList: (FindingRecord & { score: number; code: string })[] = await SELECT.from(entities.FindingRecords)
-    .columns(
-      'itemId',
-      'messageId',
-      'classification.rating.code as code',
-      'classification.rating.score as score'
-    )
-    .where({
-      import_ID: developmentObject.latestFindingImportId,
-      objectType: developmentObject.objectType,
-      objectName: developmentObject.objectName,
-      devClass: developmentObject.devClass,
-      systemId: developmentObject.systemId
-    });
+  const findingRecordList: (FindingRecord & { score: number; code: string })[] =
+    await SELECT.from(entities.FindingRecords)
+      .columns(
+        'itemId',
+        'messageId',
+        'classification.rating.code as code',
+        'classification.rating.score as score'
+      )
+      .where({
+        import_ID: developmentObject.latestFindingImportId,
+        objectType: developmentObject.objectType,
+        objectName: developmentObject.objectName,
+        devClass: developmentObject.devClass,
+        systemId: developmentObject.systemId
+      });
   LOG.info('findingRecordList', { findingRecordList: findingRecordList });
   const score = findingRecordList.reduce((sum, row) => {
     return sum + row.score;
@@ -200,7 +203,7 @@ export const importFinding = async (
   findingImport: Import,
   tx?: Transaction,
   updateProgress?: (progress: number) => Promise<void>
-) => {
+) : Promise<JobResult> => {
   if (!findingImport.file) throw new Error('File broken');
 
   const csv = await text(findingImport.file);
@@ -278,8 +281,7 @@ export const importFinding = async (
     });
 
   if (findingRecordList == null || findingRecordList.length == 0) {
-    LOG.info('No Records to import');
-    return;
+    return { message: 'No Records to import' } as JobResult;
   }
 
   await INSERT.into(entities.FindingRecords).entries(findingRecordList);
@@ -386,7 +388,11 @@ export const importFinding = async (
       );
   }
   if (insertCount > 0) {
-    LOG.info(`Inserted ${insertCount} DevelopmentObject(s)`);
+    return { message: `Inserted ${insertCount} DevelopmentObject(s)` };
+  } else {
+    throw new Error(
+      'No Development Objects found. Please check the Check Properties.'
+    );
   }
 };
 
@@ -394,11 +400,11 @@ export const importFindingsById = async (
   findingImportId: string,
   tx: Transaction,
   updateProgress?: (progress: number) => Promise<void>
-) => {
+): Promise<JobResult> => {
   const findingsRunImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
       d.ID, d.title, d.file, d.systemId;
     })
     .where({ ID: findingImportId });
-  await importFinding(findingsRunImport, tx, updateProgress);
+  return await importFinding(findingsRunImport, tx, updateProgress);
 };

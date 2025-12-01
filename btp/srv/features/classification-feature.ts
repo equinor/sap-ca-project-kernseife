@@ -29,6 +29,7 @@ import { PassThrough } from 'node:stream';
 import { streamToBuffer } from '../lib/files';
 import { createExport } from './jobs-feature';
 import { Note } from '#cds-models/AdminService';
+import { JobResult } from '../types/jobs';
 
 const LOG = log('ClassificationFeature');
 
@@ -499,7 +500,7 @@ export const importMissingClassifications = async (
   classificationImport: Import,
   tx?: Transaction,
   updateProgress?: (progress: number) => void
-) => {
+): Promise<JobResult> => {
   // Parse File
   if (!classificationImport.file) throw new Error('File broken');
   const csv = await text(classificationImport.file);
@@ -557,8 +558,7 @@ export const importMissingClassifications = async (
     classificationRecordList == null ||
     classificationRecordList.length == 0
   ) {
-    LOG.info('No Records to import');
-    return;
+    return { message: 'No Records to import' };
   }
 
   // Get all releaseState
@@ -722,14 +722,17 @@ export const importMissingClassifications = async (
   }
   const file = papa.unparse(importLogList);
   // Create Export
-  return [
-    await createExport(
-      'LOG',
-      'importLog.csv',
-      Buffer.from(file, 'utf8'),
-      'application/csv'
-    )
-  ];
+  return {
+    message: `Imported ${classificationRecordList.length} Classification Records. New Classifications: ${insertCount}`,
+    exportIdList: [
+      await createExport(
+        'LOG',
+        'importLog.csv',
+        Buffer.from(file, 'utf8'),
+        'application/csv'
+      )
+    ]
+  };
 };
 
 const getCommentForEnhancementObjectType = (
@@ -783,7 +786,7 @@ export const importEnhancementObjects = async (
   enhancementImport: Import,
   tx?: Transaction,
   updateProgress?: (progress: number) => void
-): Promise<string[]> => {
+): Promise<JobResult> => {
   // Parse File
   if (!enhancementImport.file) throw new Error('File broken');
 
@@ -942,14 +945,16 @@ export const importEnhancementObjects = async (
   }
 
   const file = papa.unparse(importLog);
-  return [
-    await createExport(
-      'LOG',
-      'importLog.csv',
-      Buffer.from(file, 'utf8'),
-      'application/csv'
-    )
-  ];
+  return {
+    exportIdList: [
+      await createExport(
+        'LOG',
+        'importLog.csv',
+        Buffer.from(file, 'utf8'),
+        'application/csv'
+      )
+    ]
+  };
 };
 
 const getCommentForExplicitObjectType = (
@@ -979,7 +984,7 @@ export const importExplicitObjects = async (
   explicitImport: Import,
   tx?: Transaction,
   updateProgress?: (progress: number) => void
-): Promise<string[]> => {
+): Promise<JobResult> => {
   // Parse File
   if (!explicitImport.file) throw new Error('File broken');
 
@@ -1132,14 +1137,16 @@ export const importExplicitObjects = async (
 
   const file = papa.unparse(importLog);
   // Write to Export
-  return [
-    await createExport(
-      'LOG',
-      'importLog.csv',
-      Buffer.from(file, 'utf8'),
-      'application/csv'
-    )
-  ];
+  return {
+    exportIdList: [
+      await createExport(
+        'LOG',
+        'importLog.csv',
+        Buffer.from(file, 'utf8'),
+        'application/csv'
+      )
+    ]
+  } as JobResult;
 };
 
 export const importExpliticObjectsById = async (
@@ -1159,7 +1166,7 @@ export const importMissingClassificationsById = async (
   missingClassificationsImportId: string,
   tx: Transaction,
   updateProgress?: (progress: number) => Promise<void>
-) => {
+): Promise<JobResult> => {
   const missingClassificationsImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
       d.ID, d.title, d.file, d.defaultRating, d.comment;
@@ -1467,16 +1474,21 @@ const importClassification = async (
       comment: classificationImport.comment,
       rating_code: classificationImport.rating || NO_CLASS,
       noteList: classificationImport.noteList
-        ? classificationImport.noteList.map((note) =>     ({
-        ID: utils.uuid(),
-        note: note.note,
-        title: note.title,
-        noteClassification_code: note.noteClassification,
-        classification_objectType: classificationImport.objectType,
-        classification_objectName: classificationImport.objectName,
-        classification_tadirObjectName: classificationImport.tadirObjectName,
-        classification_tadirObjectType: classificationImport.tadirObjectType
-      }) as Note)
+        ? classificationImport.noteList.map(
+            (note) =>
+              ({
+                ID: utils.uuid(),
+                note: note.note,
+                title: note.title,
+                noteClassification_code: note.noteClassification,
+                classification_objectType: classificationImport.objectType,
+                classification_objectName: classificationImport.objectName,
+                classification_tadirObjectName:
+                  classificationImport.tadirObjectName,
+                classification_tadirObjectType:
+                  classificationImport.tadirObjectType
+              }) as Note
+          )
         : [],
       numberOfSimplificationNotes:
         classificationImport.numberOfSimplificationNotes,
@@ -1624,7 +1636,7 @@ export const importExternalClassificationById = async (
   classificationImportId: string,
   tx: Transaction,
   updateProgress: (progress: number) => Promise<void>
-) => {
+): Promise<JobResult> => {
   // Unzip the file
   const externalImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
@@ -1679,14 +1691,17 @@ export const importExternalClassificationById = async (
     await updateProgress(100);
     // Write to file
     // Write to Export
-    return [
-      await createExport(
-        'LOG',
-        'importLog.csv',
-        Buffer.from(file, 'utf8'),
-        'application/csv'
-      )
-    ];
+    return {
+      message: `Processed ${processIndex} classifications, updated ${updateIndex} classifications.`,
+      exportIdList: [
+        await createExport(
+          'LOG',
+          'importLog.csv',
+          Buffer.from(file, 'utf8'),
+          'application/csv'
+        )
+      ]
+    };
   } catch (e) {
     LOG.error('Error loading ZIP file', { error: e });
     throw new Error('Invalid ZIP file format');

@@ -1,4 +1,3 @@
-import { JobType } from '#cds-models/kernseife/db';
 import { Jobs } from '#cds-models/AdminService';
 import { connect, entities, log, Service, Transaction } from '@sap/cds';
 import { PassThrough } from 'stream';
@@ -44,6 +43,7 @@ import { createInitialData, setupSystem } from './features/setup-feature';
 import JSZip from 'jszip';
 import { handleMessage, updateDestinations } from './lib/connectivity';
 import { timeStamp } from 'console';
+import { JobResult } from './types/jobs';
 
 export default (srv: Service) => {
   const LOG = log('AdminService');
@@ -185,12 +185,12 @@ export default (srv: Service) => {
 
     const jobId = await runAsJob(
       `Import ${importType}`,
-      `IMPORT_${importType}` as JobType,
+      `IMPORT_${importType}`,
       100,
       async (
         tx: Transaction,
         updateProgress: (progress: number) => Promise<void>
-      ) => {
+      ): Promise<JobResult> => {
         LOG.info('importType', importType);
         switch (importType) {
           case 'MISSING_CLASSIFICATION':
@@ -206,7 +206,11 @@ export default (srv: Service) => {
           case 'EXPLICIT':
             return await importExpliticObjectsById(ID, tx, updateProgress);
           case 'EXTERNAL_CLASSIFICATION':
-            return await importExternalClassificationById(ID, tx, updateProgress);
+            return await importExternalClassificationById(
+              ID,
+              tx,
+              updateProgress
+            );
           default:
             LOG.error(`Unknown Import Type ${importType}`);
             throw new Error(`Unknown Import Type ${importType}`);
@@ -341,12 +345,12 @@ export default (srv: Service) => {
 
     await runAsJob(
       `Export ${exportType}`,
-      `EXPORT_${exportType}` as JobType,
+      `EXPORT_${exportType}`,
       100,
       async (
         tx: Transaction,
         updateProgress: (progress: number) => Promise<void>
-      ) => {
+      ): Promise<JobResult> => {
         LOG.info('type', exportType);
         switch (exportType) {
           case 'SYSTEM_CLASSIFICATION': {
@@ -359,14 +363,19 @@ export default (srv: Service) => {
             await updateProgress(85);
             const file = await getClassificationJsonAsZip(classificationJson);
             await updateProgress(100);
-            return [await createExport(exportType, filename, file, fileType)];
+            return {
+              message: `Exported ${classificationJson.objectClassifications.length} classifications`,
+              exportIdList: [
+                await createExport(exportType, filename, file, fileType)
+              ]
+            };
           }
           case 'EXTERNAL_CLASSIFICATION': {
             // Wrap in ZIP
 
             const count = await getClassificationCount();
             let offset = 0;
-            const rowSize = 50000;
+            const rowSize = 100000;
             let classificationList;
             const exportList: string[] = [];
             do {
@@ -417,7 +426,10 @@ export default (srv: Service) => {
             } while (classificationList.length == rowSize);
 
             await updateProgress(100);
-            return exportList;
+            return {
+              message: `Exported ${count} classifications`,
+              exportIdList: exportList
+            };
           }
           default:
             LOG.error(`Unknown Export Type ${exportType}`);

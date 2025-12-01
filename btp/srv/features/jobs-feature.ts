@@ -1,11 +1,12 @@
-import { Export, Import, Job, JobType } from '#cds-models/kernseife/db';
-import cds, { log, utils, entities, Transaction } from '@sap/cds';
+import { Export, Import, Job } from '#cds-models/kernseife/db';
+import cds, { log, utils, entities, Transaction, db } from '@sap/cds';
+import { JobResult } from '../types/jobs';
 
 const LOG = log('Jobs');
 
 export const createJob = async (
   title: string,
-  type: JobType,
+  type: string,
   progressTotal: number
 ) => {
   const id = utils.uuid();
@@ -32,32 +33,49 @@ export const updateJobProgress = async (
   if (tx) tx.commit();
 };
 
-export const finishJob = async (id: string, exportIdList?: string[]) => {
+export const finishJob = async (id: string, jobResult?: JobResult) => {
   LOG.info('Job Finished ' + id);
-  const job = { status: 'SUCCESS' } as Job;
-  if (exportIdList) {
-    for (const exportId of exportIdList) {
+  const { progressTotal } = await SELECT.one
+    .from(entities.Jobs)
+    .columns('progressTotal')
+    .where({ ID: id });
+  const job = {
+    status: 'SUCCESS',
+    message: jobResult?.message,
+    progressCurrent: progressTotal || 100
+  } as Job;
+  if (jobResult?.exportIdList) {
+    for (const exportId of jobResult.exportIdList) {
       await setJobIdForExport(exportId, id);
     }
   }
+
   await UPDATE(entities.Jobs, { ID: id }).set(job);
 };
 
 export const failJob = async (id: string, err: any) => {
   LOG.error('Job Failed: ' + id, err);
-  await UPDATE(entities.Jobs, { ID: id }).with({ status: 'ERROR' });
+  const { progressTotal } = await SELECT.one
+    .from(entities.Jobs)
+    .columns('progressTotal')
+    .where({ ID: id });
+  await UPDATE(entities.Jobs, { ID: id }).with({
+    progressCurrent: progressTotal || 100,
+    status: 'ERROR',
+    message: err.message
+  });
 };
 
 export const runAsJob = async (
   title: string,
-  type: JobType,
+  type: string,
   progressTotal: number,
   jobFunction: (
     tx: Transaction,
     updateProgress: (progressNumber: number) => Promise<void>
-  ) => Promise<void | string[]>,
+  ) => Promise<void | JobResult>,
   errorHandler?: () => Promise<void>,
-  successHandler?: () => Promise<void | string[]>
+  successHandler?: () => Promise<void | JobResult>
 ) => {
   if (!Number.isInteger(progressTotal)) {
     throw new Error('progressTotal is Not a Number: ' + progressTotal);
@@ -70,14 +88,19 @@ export const runAsJob = async (
         updateJobProgress(jobId, tx, progress)
       );
     })
-    .on('succeeded', async (exportIdList?: string[]) => {
-      LOG.info(`Job Succeeded ${exportIdList}`);
-      await finishJob(jobId, exportIdList);
+    .on('succeeded', async (jobResult?: JobResult) => {
+      LOG.info(
+        `Job Succeeded ${jobResult?.message} ${jobResult?.exportIdList}`
+      );
+      await finishJob(jobId, jobResult);
       if (successHandler) await successHandler();
     })
     .on('failed', async (err) => {
-      await failJob(jobId, err);
-      if (errorHandler) await errorHandler();
+      // Open new transaction to avoid issues with previous transaction being rolled back
+      db.tx(async (tx) => {
+        await failJob(jobId, err);
+        if (errorHandler) await errorHandler();
+      });
     });
 
   return jobId;

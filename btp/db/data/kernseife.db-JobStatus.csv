@@ -1,0 +1,5 @@
+code,title,criticality_code
+NEW,"New",0
+RUNNING,"Running",1
+ERROR,"Error",2
+SUCCESS,"Success",3

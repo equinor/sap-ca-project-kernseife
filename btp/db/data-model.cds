@@ -949,36 +949,58 @@ entity Settings : managed {
 @cds.persistence.journal
 entity Jobs : cuid, managed {
     title           : String;
-    status          : JobStatus;
+
+    @Common.ValueListWithFixedValues: true
+    @(Common                        : {
+        Label    : '{i18n>jobStatus}',
+        ValueList: {
+            CollectionPath: 'JobStatus',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: status,
+                    ValueListProperty: 'code',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'title'
+                }
+            ]
+        }
+    })
+    status          : JobStatus:code;
+    statusDetail    : Association to JobStatus
+                          on statusDetail.code = $self.status;
+
+    @Common.ValueListWithFixedValues: true
+    @(Common                        : {
+        Label    : '{i18n>jobType}',
+        ValueList: {
+            CollectionPath: 'JobTypes',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: type,
+                    ValueListProperty: 'code',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'title'
+                }
+            ]
+        }
+    })
     type            : String;
+    typeDetail      : Association to JobTypes
+                          on typeDetail.code = $self.type;
     progressCurrent : Integer;
     progressTotal   : Integer;
+    message         : String;
 
     importList      : Association to many Imports
                           on $self.ID = importList.job_ID;
     exportList      : Association to many Exports
                           on $self.ID = exportList.job_ID;
-}
-
-@assert.range
-type JobStatus      : String enum {
-    NEW;
-    RUNNING;
-    ERROR;
-    SUCCESS;
-}
-
-@assert.range
-type JobType        : String enum {
-    IMPORT_FINDINGS = 'IMPORT_FINDINGS';
-    IMPORT_MISSING_CLASSIFICATION = 'IMPORT_MISSING_CLASSIFICATION';
-    EXPORT_MISSING_CLASSIFICATION = 'EXPORT_MISSING_CLASSIFICATION';
-    IMPORT_EXTERNAL_CLASSIFICATION = 'IMPORT_EXTERNAL_CLASSIFICATION';
-    EXPORT_EXTERNAL_CLASSIFICATION = 'EXPORT_EXTERNAL_CLASSIFICATION';
-    EXPORT_SYSTEM_CLASSIFICATION = 'EXPORT_SYSTEM_CLASSIFICATION';
-    IMPORT_RELEASE_STATE = 'IMPORT_RELEASE_STATE';
-    IMPORT_ENHANCEMENT = 'IMPORT_ENHANCEMENT';
-    IMPORT_EXPLICIT = 'IMPORT_EXPLICIT';
 }
 
 
@@ -1093,3 +1115,26 @@ entity Destinations {
         proxyType      : String;
         authentication : String;
 }
+
+@cds.odata.valuelist
+entity JobStatus {
+    key code        : String;
+        criticality : Association to Criticality;
+        title       : String;
+}
+
+
+entity JobTypes                     as
+        select from db.ImportTypes {
+            key concat(
+                    'IMPORT_', code
+                ) as code : String,
+                title
+        }
+    union
+        select from db.ExportTypes {
+            key concat(
+                    'EXPORT_', code
+                ) as code : String,
+                title
+        }

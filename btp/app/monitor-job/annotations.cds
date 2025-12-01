@@ -18,7 +18,12 @@ annotate service.Jobs with @(
                 $Type : 'UI.DataFieldForAnnotation',
                 Target: '@UI.DataPoint#progressCurrent',
                 Label : '{i18n>progress}',
-            }
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: '{i18n>message}',
+                Value: message
+            },
         ],
     },
     UI.Facets                             : [
@@ -51,16 +56,18 @@ annotate service.Jobs with @(
             ![@UI.Importance]: #High,
         },
         {
-            $Type            : 'UI.DataField',
-            Label            : '{i18n>status}',
-            Value            : status,
-            ![@UI.Importance]: #High,
+            $Type                    : 'UI.DataField',
+            Label                    : '{i18n>status}',
+            Value                    : statusDetail.title,
+            ![@UI.Importance]        : #High,
+            Criticality              : statusDetail.criticality.criticality,
+            CriticalityRepresentation: #WithIcon,
         },
         {
-            $Type            : 'UI.DataField',
-            Label            : '{i18n>type}',
-            Value            : type,
-            ![@UI.Importance]: #Medium,
+            $Type                    : 'UI.DataField',
+            Label                    : '{i18n>type}',
+            Value                    : typeDetail.title,
+            ![@UI.Importance]        : #Medium
         },
         {
             $Type                : 'UI.DataFieldForAnnotation',
@@ -68,6 +75,12 @@ annotate service.Jobs with @(
             Label                : '{i18n>progress}',
             ![@UI.Importance]    : #High,
             ![@HTML5.CssDefaults]: {width: '8rem'},
+        },
+        {
+            $Type            : 'UI.DataField',
+            Label            : '{i18n>message}',
+            Value            : message,
+            ![@UI.Importance]: #Medium,
         },
         {
             $Type            : 'UI.DataField',
@@ -98,7 +111,6 @@ annotate service.Jobs with @(
                 Property  : modifiedAt,
                 Descending: true,
             }, ],
-            GroupBy       : [type, ],
         },
         SelectionVariant   : {
             $Type        : 'UI.SelectionVariantType',
@@ -108,8 +120,14 @@ annotate service.Jobs with @(
 );
 
 annotate service.Jobs with {
-    type @Common.Label: '{i18n>type}';
+    type   @Common.Label: '{i18n>type}';
+    status @Common.Label: '{i18n>status}';
 };
+
+annotate service.Jobs with @(UI.SelectionFields: [
+    type,
+    status
+]);
 
 annotate service.Imports with @(UI.LineItem #importList: [{
     $Type                : 'UI.DataField',
