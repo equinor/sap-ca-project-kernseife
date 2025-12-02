@@ -1293,7 +1293,7 @@ export const getClassificationJsonExternal = async (
   //  LOG.info(`Read ${rows} Classifications (Offset: ${offset})`);
   const whereClause: any = {};
   if (dateFrom) {
-    whereClause.updatedAt = { '>=': dateFrom };
+    whereClause.modifiedAt = { '>=': dateFrom };
   }
   const classifications: Classifications = await SELECT.from(
     entities.Classifications,
