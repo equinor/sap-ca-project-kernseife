@@ -296,6 +296,11 @@ sap.ui.define(
 
         onOk: async function (oEvent) {
           setDialogBusy(true);
+          let dateValue = byId('dateFrom').getValue();
+          if (!dateValue) {
+            dateValue = null;
+          }
+
           await oExtensionAPI.getEditFlow().invokeAction('triggerExport', {
             model: oExtensionAPI.getModel(),
             parameterValues: [
@@ -304,7 +309,7 @@ sap.ui.define(
                 value: byId('exportType').getSelectedKey()
               },
               { name: 'legacy', value: byId('legacy').getSelected() },
-              { name: 'dateFrom', value: byId('dateFrom').getDateValue() }
+              { name: 'dateFrom', value: dateValue }
             ],
             skipParameterDialog: true
           });

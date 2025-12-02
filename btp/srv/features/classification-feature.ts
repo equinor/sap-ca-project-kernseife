@@ -1221,9 +1221,8 @@ export const getClassificationJsonStandard = async () => {
 };
 
 export const getClassificationJsonCustom = async (
-  options: { legacy: boolean; dateFrom: string | null | undefined } = {
-    legacy: false,
-    dateFrom: undefined
+  options: { legacy: boolean } = {
+    legacy: false
   }
 ) => {
   let ratings: Ratings = [];
@@ -1231,13 +1230,6 @@ export const getClassificationJsonCustom = async (
 
   if (options.legacy) {
     whereClause = { usableInClassification: true };
-  }
-
-  if (options.dateFrom) {
-    whereClause = {
-      ...whereClause,
-      modifiedAt: { '>=': options.dateFrom }
-    };
   }
 
   ratings = await SELECT.from(entities.Ratings, (r: any) => {
@@ -1295,9 +1287,14 @@ export const getClassificationJsonCustom = async (
  */
 export const getClassificationJsonExternal = async (
   rows: number,
-  offset: number
+  offset: number,
+  dateFrom?: string
 ) => {
   //  LOG.info(`Read ${rows} Classifications (Offset: ${offset})`);
+  const whereClause: any = {};
+  if (dateFrom) {
+    whereClause.updatedAt = { '>=': dateFrom };
+  }
   const classifications: Classifications = await SELECT.from(
     entities.Classifications,
     (c: any) => {
@@ -1326,7 +1323,8 @@ export const getClassificationJsonExternal = async (
       'objectType',
       'objectName'
     )
-    .limit(rows, offset);
+    .limit(rows, offset)
+    .where(whereClause);
   return classifications.map(
     (classification) =>
       ({

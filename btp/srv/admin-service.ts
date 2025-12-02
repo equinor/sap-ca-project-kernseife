@@ -358,7 +358,7 @@ export default (srv: Service) => {
             const filename = `system_classification_${dayjs().format('YYYY_MM_DD')}.zip`;
             await updateProgress(15);
             const classificationJson = await getClassificationJsonCustom({
-              legacy, dateFrom
+              legacy
             });
             await updateProgress(85);
             const file = await getClassificationJsonAsZip(classificationJson);
@@ -385,7 +385,8 @@ export default (srv: Service) => {
               const progress = Math.round((100 / count) * rowSize * offset);
               classificationList = await getClassificationJsonExternal(
                 rowSize,
-                offset * rowSize
+                offset * rowSize,
+                dateFrom
               );
               if (tx) tx.commit(); // Commit Read
               for (const classification of classificationList) {
