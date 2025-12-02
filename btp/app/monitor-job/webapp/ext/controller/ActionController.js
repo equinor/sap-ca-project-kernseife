@@ -296,7 +296,7 @@ sap.ui.define(
 
         onOk: async function (oEvent) {
           setDialogBusy(true);
-          let dateValue = byId('dateFrom').getValue();
+          let dateValue = byId('dateFrom').getDateValue();
           if (!dateValue) {
             dateValue = null;
           }

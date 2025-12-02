@@ -14,7 +14,7 @@
             <Label id="labelLegacy" text="{i18n>labelLegacy}" labelFor="legacy" />
             <CheckBox id="legacy" text="{i18n>legacy}" />
             <Label id="labelDateFrom" text="{i18n>labelDateFrom}" labelFor="dateFrom"/>
-            <DatePicker id="dateFrom" placeholder="{i18n>placeholderDateFrom}" valueFormat="yyyy-MM-dd"/>
+            <DatePicker id="dateFrom" placeholder="{i18n>placeholderDateFrom}"/>
         </content>
         <beginButton>
             <Button id="exportOk" text="{i18n>OK}" press=".onOk" type="Emphasized" enabled="false" />
