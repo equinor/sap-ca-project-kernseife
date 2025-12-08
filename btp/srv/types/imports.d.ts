@@ -65,7 +65,7 @@ export type ProjectImport = {
   findingCount: number;
 };
 
-export interface DevelopmentObjectImport {
+export type DevelopmentObjectImport = {
   projectId: string;
   runId: string;
   objectType: string;
@@ -76,10 +76,11 @@ export interface DevelopmentObjectImport {
   languageVersion: string;
   contactPerson: string;
   _findings: FindingImport[];
-  _metrics: MetricsImport[];
-}
+  _metrics: MetricsImport;
+  _usages: UsageImport[];
+};
 
-export interface FindingImport {
+export type FindingImport = {
   projectId: string;
   runId: string;
   itemId: string;
@@ -93,12 +94,21 @@ export interface FindingImport {
   refApplicationComponent: string;
   refSoftwareComponent: string;
   refDevClass: string;
-}
+};
 
-export interface MetricsImport {
+export type MetricsImport = {
   projectId: string;
   objectType: string;
   objectName: string;
   difficulty: number;
   numberOfChanges: number;
-}
+};
+
+export type UsageImport = {
+  entry_point_type: string;
+  entry_point_name: string;
+  obj_type: string;
+  obj_name: string;
+  counter: number;
+  last_used: string;
+};

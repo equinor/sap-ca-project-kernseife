@@ -207,6 +207,8 @@ service AdminService @(requires: 'admin') {
                                             where
                                                 hidden == false;
 
+    entity DevelopmentObjectUsages       as projection on db.DevelopmentObjectUsages;
+
     @cds.redirection.target: false
     define view RatingsValueList as
         select from db.Ratings

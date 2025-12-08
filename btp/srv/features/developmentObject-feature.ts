@@ -3,7 +3,8 @@ import {
   Import,
   FindingRecord,
   CleanCoreLevel,
-  DevelopmentObjects
+  DevelopmentObjects,
+  DevelopmentObjectUsage
 } from '#cds-models/kernseife/db';
 import { db, entities, log, Transaction, utils } from '@sap/cds';
 import { text } from 'node:stream/consumers';
@@ -529,6 +530,7 @@ export const importDevelopmentObjectsBTP = async (
     );
 
     const developmentObjectInsert = [] as Partial<DevelopmentObject>[];
+    const usageInsert = [] as Partial<DevelopmentObjectUsage>[];
     for (const developmentObjectImport of developmentObjectImportList) {
       const id = getDevelopmentObjectIdentifier(developmentObjectImport);
       if (map.has(id)) {
@@ -545,6 +547,8 @@ export const importDevelopmentObjectsBTP = async (
         softwareComponent: developmentObjectImport.softwareComponent,
         latestFindingImportId: developmentObjectsImport.ID,
         languageVersion_code: developmentObjectImport.languageVersion,
+        difficulty: developmentObjectImport._metrics?.difficulty || 0,
+        numberOfChanges: developmentObjectImport._metrics?.numberOfChanges || 0,
         namespace: ''
       } as DevelopmentObject;
 
@@ -578,9 +582,27 @@ export const importDevelopmentObjectsBTP = async (
       ) {
         LOG.error('Invalid Development Object', { developmentObject });
       }
+
       developmentObjectInsert.push(developmentObject);
 
       insertCount++;
+
+      // Usages
+      if (
+        developmentObjectImport._usages &&
+        developmentObjectImport._usages.length > 0
+      ) {
+        usageInsert.push(
+          ...developmentObjectImport._usages.map((usage) => ({
+            entryPointObjectType: usage.entry_point_type,
+            entryPointObjectName: usage.entry_point_name,
+            objectType: usage.obj_type,
+            objectName: usage.obj_name,
+            counter: usage.counter,
+            lastUsed: usage.last_used
+          }))
+        );
+      }
     }
     if (developmentObjectInsert.length > 0) {
       await INSERT.into(entities.DevelopmentObjects).entries(
@@ -590,6 +612,14 @@ export const importDevelopmentObjectsBTP = async (
         await tx.commit();
       }
     }
+
+    if (usageInsert.length > 0) {
+      await INSERT.into(entities.DevelopmentObjectUsages).entries(usageInsert);
+      if (tx) {
+        await tx.commit();
+      }
+    }
+
     if (updateProgress)
       await updateProgress(
         50 + Math.round((50 / project.totalObjectCount) * insertCount)

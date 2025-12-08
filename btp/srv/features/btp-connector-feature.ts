@@ -54,7 +54,7 @@ export const getDevelopmentObjects = async (
     method: 'GET',
     url:
       BTP_CONNECTOR_PATH +
-      `ZKNSF_I_DEVELOPMENT_OBJECTS?$top=${top}&$skip=${skip}&$expand=_findings,_metrics&$filter=projectId eq ${projectId}`
+      `ZKNSF_I_DEVELOPMENT_OBJECTS?$top=${top}&$skip=${skip}&$expand=_findings,_metrics,_usages&$filter=projectId eq ${projectId}`
   });
   // LOG.info(
   //   `Received response from Destination ${destination}: ${JSON.stringify(response?.result?.value)}`
