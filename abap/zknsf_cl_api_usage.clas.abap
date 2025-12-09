@@ -77,6 +77,8 @@ CLASS ZKNSF_CL_API_USAGE IMPLEMENTATION.
   METHOD constructor.
     super->constructor( ).
 
+    " Version: 1.4.0
+
     description         = 'Kernseife: Usage of APIs'(000).
     version             = '000'.
     category            = 'ZKNSF_CL_CI_CATEGORY' ##NO_TEXT.
@@ -355,7 +357,7 @@ CLASS ZKNSF_CL_API_USAGE IMPLEMENTATION.
       WHEN OTHERS.
         " This could mean this is used as a Type definition
         TRY.
-            " Read Classification (as standard doesn't pass it into this method..
+            " Read Classification (as standard doesn't pass it into this method..)
             DATA(usages) = VALUE if_ycm_cc_usage_preprocessor=>ty_usages( ( trobjtype = used_api-trobjtype sobj_name = used_api-sobj_name object_type = used_api-object_type sub_key = used_api-sub_key ) ).
             DATA(classic_provider) = NEW zknsf_cl_provider_with_cache( ).
             DATA(classic_info) = classic_provider->if_ycm_cc_provider_classic_api~get_classifications( usages ).

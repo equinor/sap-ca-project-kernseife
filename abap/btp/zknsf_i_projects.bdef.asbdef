@@ -8,5 +8,6 @@ authorization master ( instance )
 
 {
  static action Setup;
+ static action RunATC;
  static action UploadFile deep parameter ZKNSF_I_FILE_UPLOAD ;
 }

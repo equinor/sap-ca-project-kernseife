@@ -5,4 +5,6 @@ define role ZKNSF_BTP_ACCESS {
   grant select on ZKNSF_I_DEVELOPMENT_OBJECTS;
   grant select on ZKNSF_I_FINDINGS;
   grant select on ZKNSF_I_METRICS;
+  grant select on ZKNSF_I_OBJECT_COUNT;
+  grant select on ZKNSF_I_FINDING_COUNT;
 }

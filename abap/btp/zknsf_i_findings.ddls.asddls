@@ -18,6 +18,8 @@ define view entity ZKNSF_I_FINDINGS
   key     cast( fnd.itemId as zknsf_item_id preserving type )         as itemId,
           cast( fnd.objectType as zknsf_object_type )                 as objectType,
           cast( fnd.objectName as zknsf_object_name preserving type ) as objectName,
+          cast( fnd.devClass as zknsf_dev_class )                     as devClass,
+          cast( fnd.softwareComponent as zknsf_sw_comp )              as softwareComponent,
           cast( fnd.messageId as zknsf_message_id )                   as messageId,
           cast(  case fnd.refObjectType
           when 'STOB' then 'CDS_STOB'
@@ -30,6 +32,7 @@ define view entity ZKNSF_I_FINDINGS
           fnd.refApplicationComponent                                 as refApplicationComponent,
           fnd.refSoftwareComponent                                    as refSoftwareComponent,
           fnd.refDevClass                                             as refDevClass
+
 
 }
 where
