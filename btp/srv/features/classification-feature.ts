@@ -91,9 +91,9 @@ export const getClassificationState = (classification: Classification) => {
 };
 
 export const getClassificationCount = async (dateFrom?: string) => {
-  const result = await SELECT.from(entities.Classifications).columns(
-    'COUNT( * ) as count'
-  ).where(dateFrom ? { modifiedAt: { '>=': dateFrom } } : {});
+  const result = await SELECT.from(entities.Classifications)
+    .columns('COUNT( * ) as count')
+    .where(dateFrom ? { modifiedAt: { '>=': dateFrom } } : {});
   return result[0]['count'];
 };
 
@@ -1729,10 +1729,12 @@ export const getClassificationJsonAsZip = async (classificationJson: any) => {
   return file;
 };
 
-export const syncClassificationsToExternalSystemByRef = async (ref: any) => {
+export const syncClassificationsToExternalSystemByRef = async (
+  ref: any
+) => {
   const system: System = await SELECT.one.from(ref);
   if (!system || !system.destination) {
-    throw new Error(`System not found or no destination defined for system`);
+    throw new Error('System not found or destination not set');
   }
   LOG.info(`Syncing Classifications to System ${system.sid}`);
   const classificationJson = await getClassificationJsonCustom();
@@ -1743,7 +1745,7 @@ export const syncClassificationsToExternalSystemByRef = async (ref: any) => {
   LOG.info(
     `Created ZIP file for Classification JSON, size ${zipFile.length} bytes`
   );
-  await syncClassificationsToExternalSystem(system, zipFile);
+ await syncClassificationsToExternalSystem(system, zipFile);
 };
 
 export const syncClassificationsToExternalSystems = async () => {
@@ -1784,6 +1786,9 @@ const syncClassificationsToExternalSystem = async (
     }
   );
   LOG.info(
-    `Received response from System ${system.sid}: ${JSON.stringify(response)}`
+    `Received response from System ${system.sid}: ${JSON.stringify(response?.message)}`
   );
+  if(response?.status !== 200){
+    throw new Error(`${response?.message?.message}`);
+  }
 };

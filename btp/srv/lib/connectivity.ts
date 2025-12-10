@@ -1,5 +1,7 @@
 import { Destination } from '#cds-models/kernseife/db';
-import { getAllDestinationsFromDestinationService } from '@sap-cloud-sdk/connectivity';
+import {
+  getAllDestinationsFromDestinationService
+} from '@sap-cloud-sdk/connectivity';
 import { entities } from '@sap/cds';
 import { executeHttpRequest } from '@sap-cloud-sdk/http-client';
 import { Message } from '../types/connectivity';
@@ -32,6 +34,7 @@ export const updateDestinations = async () => {
 
 export const remoteServiceCall = async (payload: {
   destinationName: string;
+  jwtToken?: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   url: string;
   data?: any;
@@ -41,7 +44,8 @@ export const remoteServiceCall = async (payload: {
 }> => {
   const response = await executeHttpRequest(
     {
-      destinationName: payload.destinationName
+      destinationName: payload.destinationName,
+      jwt: payload.jwtToken
     },
     {
       method: payload.method,
@@ -52,18 +56,12 @@ export const remoteServiceCall = async (payload: {
   let message: Message = { message: '', numericSeverity: 0 };
   if (response.headers['sap-messages']) {
     const messages = JSON.parse(response.headers['sap-messages']);
-    message = messages.reduce(
-      (
-        acc: Message,
-        curr: Message
-      ) => {
-        if (curr.numericSeverity > acc.numericSeverity) {
-          return curr;
-        }
-        return acc;
-      },
-      message
-    );
+    message = messages.reduce((acc: Message, curr: Message) => {
+      if (curr.numericSeverity > acc.numericSeverity) {
+        return curr;
+      }
+      return acc;
+    }, message);
     return { result: response.data, message: message };
   }
   return {
@@ -72,10 +70,7 @@ export const remoteServiceCall = async (payload: {
   };
 };
 
-export const handleMessage = (
-  req: any,
-  message: Message
-): void => {
+export const handleMessage = (req: any, message: Message): void => {
   if (message.numericSeverity == 3) {
     req.warn(message.message);
   } else if (message.numericSeverity === 2) {

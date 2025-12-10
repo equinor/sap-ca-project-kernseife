@@ -28,11 +28,13 @@ export const setupProject = async (destination: string) => {
 };
 
 export const getProject = async (
-  destination: string
+  destination: string,
+  jwtToken?: string
 ): Promise<ProjectImport> => {
   // Read Project
   const response = await remoteServiceCall({
     destinationName: destination,
+    jwtToken,
     method: 'GET',
     url: BTP_CONNECTOR_PATH + 'ZKNSF_I_PROJECTS'
   });

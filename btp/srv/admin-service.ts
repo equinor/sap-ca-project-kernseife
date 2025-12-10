@@ -309,8 +309,16 @@ export default (srv: Service) => {
     'syncClassifications',
     ['Systems', 'Systems.drafts'],
     async (req: any) => {
-      await syncClassificationsToExternalSystemByRef(req.subject);
-      req.notify('SYNC_SUCCESSFUL');
+      try {
+        await syncClassificationsToExternalSystemByRef(req.subject);
+
+        req.notify('SYNC_SUCCESSFUL');
+      } catch (e: any) {
+        handleMessage(req, {
+          message: e.message,
+          numericSeverity: 3
+        });
+      }
     }
   );
 
@@ -346,11 +354,22 @@ export default (srv: Service) => {
       system.setupDone = false;
       system.setupNotDone = true;
       if (system.destination) {
-        const project = await getProject(system.destination);
-        //LOG.info('Project for System', { project });
-        system.project = project;
-        system.setupDone = true;
-        system.setupNotDone = false; // As UI Bindings cannot handle negation
+        LOG.info('Authorization', { auth: req.headers.authorization });
+        try {
+          const project = await getProject(
+            system.destination,
+            req.headers.authorization
+          );
+          //LOG.info('Project for System', { project });
+          system.project = project;
+          system.setupDone = true;
+          system.setupNotDone = false; // As UI Bindings cannot handle negation
+        } catch (e) {
+          LOG.error('Error getting Project for System', {
+            systemId: system.ID,
+            error: e
+          });
+        }
       }
     }
   });
