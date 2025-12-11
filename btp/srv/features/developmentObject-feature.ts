@@ -6,7 +6,7 @@ import {
   DevelopmentObjects,
   DevelopmentObjectUsage
 } from '#cds-models/kernseife/db';
-import { db, entities, log, Transaction, utils } from '@sap/cds';
+import { db, entities, log, Transaction, context } from '@sap/cds';
 import { text } from 'node:stream/consumers';
 import papa from 'papaparse';
 import {
@@ -23,7 +23,6 @@ import {
   getFindingsCount,
   getProject
 } from './btp-connector-feature';
-import { FindingImport } from '../types/imports';
 
 const LOG = log('DevelopmentObjectFeature');
 
@@ -432,14 +431,14 @@ export const importDevelopmentObjectsBTP = async (
   const destination = await getDestinationBySystemId(systemId);
 
   // Get Project Id
-  const project = await getProject(destination);
+  const project = await getProject({ destination }); 
 
   let top = 1000;
   let skip = 0;
 
   // Process Findings
   const findingsCount = await getFindingsCount(
-    destination,
+    { destination },
     project.projectId,
     project.runId
   );
@@ -451,7 +450,7 @@ export const importDevelopmentObjectsBTP = async (
   skip = 0;
   while (findingsCount > findingsCounter) {
     const findingsImportList = await getFindings(
-      destination,
+      { destination },
       project.projectId,
       project.runId,
       top,
@@ -516,14 +515,14 @@ export const importDevelopmentObjectsBTP = async (
   const map = new Map<string, string>();
 
   const developmentObjectCount = await getDevelopmentObjectsCount(
-    destination,
+    { destination },
     project.projectId
   );
   top = 100;
   skip = 0;
   while (skip < developmentObjectCount) {
     const developmentObjectImportList = await getDevelopmentObjects(
-      destination,
+      { destination },
       project.projectId,
       top,
       skip

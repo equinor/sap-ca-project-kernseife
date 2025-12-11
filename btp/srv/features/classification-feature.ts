@@ -22,7 +22,8 @@ import {
   ClassificationKey,
   ClassificationImportLog,
   EnhancementImport,
-  ExplicitImport
+  ExplicitImport,
+  MissingClassificationImport
 } from '../types/imports';
 import JSZip from 'jszip';
 import { PassThrough } from 'node:stream';
@@ -30,6 +31,11 @@ import { streamToBuffer } from '../lib/files';
 import { createExport } from './jobs-feature';
 import { Note } from '#cds-models/AdminService';
 import { JobResult } from '../types/jobs';
+import { Connection } from '../types/connectivity';
+import {
+  getDestinationBySystemId,
+  getMissingClassifications
+} from './btp-connector-feature';
 
 const LOG = log('ClassificationFeature');
 
@@ -497,58 +503,27 @@ export const importInitialClassification = async (csv: string) => {
 };
 
 export const importMissingClassifications = async (
-  classificationImport: Import,
+  classificationRecordList: MissingClassificationImport[],
+  comment?: string,
+  defaultRating?: string,
   tx?: Transaction,
   updateProgress?: (progress: number) => void
 ): Promise<JobResult> => {
-  // Parse File
-  if (!classificationImport.file) throw new Error('File broken');
-  const csv = await text(classificationImport.file);
-  const result = papa.parse<any>(csv, {
-    header: true,
-    skipEmptyLines: true
+  classificationRecordList.filter((finding) => {
+    if (
+      !finding.tadirObjectType ||
+      !finding.tadirObjectName ||
+      !finding.objectType ||
+      !finding.objectName ||
+      !finding.subType ||
+      !finding.applicationComponent ||
+      !finding.softwareComponent
+    ) {
+      LOG.warn('Invalid finding', { finding });
+      return false;
+    }
+    return true;
   });
-
-  const classificationRecordList = result.data
-    .map((finding) => ({
-      // Map Attribues
-      tadirObjectType:
-        finding.tadirObjectType ||
-        finding.TADIROBJECTTYPE ||
-        finding.tadirobjecttype,
-      tadirObjectName:
-        finding.tadirObjectName ||
-        finding.TADIROBJECTNAME ||
-        finding.tadirobjectname,
-      objectType:
-        finding.objectType || finding.OBJECTTYPE || finding.objecttype,
-      objectName:
-        finding.objectName || finding.OBJECTNAME || finding.objectname,
-      softwareComponent:
-        finding.softwareComponent ||
-        finding.SOFTWARECOMPONENT ||
-        finding.softwarecomponent,
-      applicationComponent:
-        finding.applicationComponent ||
-        finding.APPLICATIONCOMPONENT ||
-        finding.applicationcomponent,
-      subType: finding.subType || finding.SUBTYPE
-    }))
-    .filter((finding) => {
-      if (
-        !finding.tadirObjectType ||
-        !finding.tadirObjectName ||
-        !finding.objectType ||
-        !finding.objectName ||
-        !finding.subType ||
-        !finding.applicationComponent ||
-        !finding.softwareComponent
-      ) {
-        LOG.warn('Invalid finding', { finding });
-        return false;
-      }
-      return true;
-    });
 
   if (!classificationRecordList || classificationRecordList.length == 0) {
     throw new Error('No valid Findings Found');
@@ -599,7 +574,7 @@ export const importMissingClassifications = async (
           releaseLevel_code: 'undefined',
           successorClassification_code: 'undefined',
           referenceCount: 0,
-          comment: classificationImport.comment || ''
+          comment: comment || ''
         } as Classification;
 
         if (classification.subType == 'TABL') {
@@ -619,8 +594,7 @@ export const importMissingClassifications = async (
 
         // Set default rating code
         classification.rating_code =
-          classificationImport.defaultRating ||
-          getDefaultRatingCode(classification);
+          defaultRating || getDefaultRatingCode(classification);
 
         // Add to Map to prevent double inserts
         classificationRatingMap.set(key, classification.rating_code);
@@ -638,20 +612,17 @@ export const importMissingClassifications = async (
           oldRating: '',
           newRating: classification.rating_code
         } as ClassificationImportLog);
-      } else if (
-        classificationImport.defaultRating != NO_CLASS ||
-        classificationImport.comment
-      ) {
+      } else if (defaultRating != NO_CLASS || comment) {
         const updatePayload = {} as { rating_code?: string; comment?: string };
         if (
-          classificationImport.defaultRating &&
-          classificationImport.defaultRating != NO_CLASS &&
-          classificationRatingMap.get(key) != classificationImport.defaultRating
+          defaultRating &&
+          defaultRating != NO_CLASS &&
+          classificationRatingMap.get(key) != defaultRating
         ) {
-          updatePayload['rating_code'] = classificationImport.defaultRating;
+          updatePayload['rating_code'] = defaultRating;
         }
-        if (classificationImport.comment) {
-          updatePayload['comment'] = classificationImport.comment;
+        if (comment) {
+          updatePayload['comment'] = comment;
         }
 
         // Update Rating
@@ -1172,8 +1143,72 @@ export const importMissingClassificationsById = async (
       d.ID, d.title, d.file, d.defaultRating, d.comment;
     })
     .where({ ID: missingClassificationsImportId });
+
+  // Parse File
+  if (!missingClassificationsImport.file) throw new Error('File broken');
+  const csv = await text(missingClassificationsImport.file);
+  const result = papa.parse<any>(csv, {
+    header: true,
+    skipEmptyLines: true
+  });
+
+  const classificationRecordList = result.data.map((finding) => ({
+    // Map Attribues
+    tadirObjectType:
+      finding.tadirObjectType ||
+      finding.TADIROBJECTTYPE ||
+      finding.tadirobjecttype,
+    tadirObjectName:
+      finding.tadirObjectName ||
+      finding.TADIROBJECTNAME ||
+      finding.tadirobjectname,
+    objectType: finding.objectType || finding.OBJECTTYPE || finding.objecttype,
+    objectName: finding.objectName || finding.OBJECTNAME || finding.objectname,
+    softwareComponent:
+      finding.softwareComponent ||
+      finding.SOFTWARECOMPONENT ||
+      finding.softwarecomponent,
+    applicationComponent:
+      finding.applicationComponent ||
+      finding.APPLICATIONCOMPONENT ||
+      finding.applicationcomponent,
+    subType: finding.subType || finding.SUBTYPE
+  }));
+
   return await importMissingClassifications(
-    missingClassificationsImport,
+    classificationRecordList,
+    missingClassificationsImport.comment || undefined,
+    missingClassificationsImport.defaultRating || undefined,
+    tx,
+    updateProgress
+  );
+};
+
+export const importMissingClassificationsBTP = async (
+  importId: string,
+  tx: Transaction,
+  updateProgress?: (progress: number) => Promise<void>
+): Promise<JobResult> => {
+  const developmentObjectsImport = await SELECT.one
+    .from(entities.Imports, (d: Import) => {
+      d.ID, d.title, d.systemId;
+    })
+    .where({ ID: importId });
+
+  const systemId = developmentObjectsImport.systemId;
+
+  // Get Destination from System
+  const destination = await getDestinationBySystemId(systemId);
+
+  // Get Missing Classifications
+  const missingClassificationList = await getMissingClassifications({
+    destination
+  });
+
+  return await importMissingClassifications(
+    missingClassificationList,
+    undefined, // no comment
+    undefined, // no default rating
     tx,
     updateProgress
   );
@@ -1729,9 +1764,7 @@ export const getClassificationJsonAsZip = async (classificationJson: any) => {
   return file;
 };
 
-export const syncClassificationsToExternalSystemByRef = async (
-  ref: any
-) => {
+export const syncClassificationsToExternalSystemByRef = async (ref: any) => {
   const system: System = await SELECT.one.from(ref);
   if (!system || !system.destination) {
     throw new Error('System not found or destination not set');
@@ -1745,7 +1778,7 @@ export const syncClassificationsToExternalSystemByRef = async (
   LOG.info(
     `Created ZIP file for Classification JSON, size ${zipFile.length} bytes`
   );
- await syncClassificationsToExternalSystem(system, zipFile);
+  await syncClassificationsToExternalSystem(system, zipFile);
 };
 
 export const syncClassificationsToExternalSystems = async () => {
@@ -1788,7 +1821,7 @@ const syncClassificationsToExternalSystem = async (
   LOG.info(
     `Received response from System ${system.sid}: ${JSON.stringify(response?.message)}`
   );
-  if(response?.status !== 200){
+  if (response?.status !== 200) {
     throw new Error(`${response?.message?.message}`);
   }
 };

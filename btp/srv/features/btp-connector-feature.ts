@@ -4,17 +4,20 @@ import { System } from '#cds-models/kernseife/db';
 import {
   DevelopmentObjectImport,
   FindingImport,
+  MissingClassificationImport,
   ProjectImport
 } from '../types/imports';
+import { Connection } from '../types/connectivity';
 
 export const BTP_CONNECTOR_PATH =
   '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001/';
 
 const LOG = log('BTP Connector');
 
-export const setupProject = async (destination: string) => {
+export const setupProject = async (connection: Connection) => {
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'POST',
     url:
       BTP_CONNECTOR_PATH +
@@ -22,31 +25,31 @@ export const setupProject = async (destination: string) => {
     data: {}
   });
   LOG.info(
-    `Received response from Destination ${destination}: ${response.message}`
+    `Received response from Destination ${connection.destination}: ${response.message}`
   );
   return response.message;
 };
 
 export const getProject = async (
-  destination: string,
-  jwtToken?: string
+  connection: Connection
 ): Promise<ProjectImport> => {
   // Read Project
   const response = await remoteServiceCall({
-    destinationName: destination,
-    jwtToken,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'GET',
     url: BTP_CONNECTOR_PATH + 'ZKNSF_I_PROJECTS'
   });
   LOG.info(
-    `Received response from Destination ${destination}: ${JSON.stringify(response?.result?.value)}`
+    `Received response from Destination ${connection.destination}: ${JSON.stringify(response?.result?.value)}`
   );
   return response.result.value[0] as ProjectImport;
 };
 
-export const triggerAtcRun = async (destination: string) => {
+export const triggerAtcRun = async (connection: Connection) => {
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'POST',
     url:
       BTP_CONNECTOR_PATH +
@@ -54,21 +57,21 @@ export const triggerAtcRun = async (destination: string) => {
     data: {}
   });
   LOG.info(
-    `Received response from Destination ${destination}: ${response.message}`
+    `Received response from Destination ${connection.destination}: ${response.message}`
   );
   return response.message;
 };
 
-
 export const getDevelopmentObjects = async (
-  destination: string,
+  connection: Connection,
   projectId: string,
   top: number,
   skip: number
 ): Promise<DevelopmentObjectImport[]> => {
   // Read Development Objects
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'GET',
     url:
       BTP_CONNECTOR_PATH +
@@ -81,25 +84,26 @@ export const getDevelopmentObjects = async (
 };
 
 export const getDevelopmentObjectsCount = async (
-  destination: string,
+  connection: Connection,
   projectId: string
 ): Promise<number> => {
   // Read Development Objects
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'GET',
     url:
       BTP_CONNECTOR_PATH +
       `ZKNSF_I_DEVELOPMENT_OBJECTS/$count?$filter=projectId eq ${projectId}`
   });
-   LOG.info(
-     `Received response from Destination ${destination}: ${JSON.stringify(response?.result)}`
-   );
+  LOG.info(
+    `Received response from Destination ${connection.destination}: ${JSON.stringify(response?.result)}`
+  );
   return response.result as number;
 };
 
 export const getFindings = async (
-  destination: string,
+  connection: Connection,
   projectId: string,
   runId: string,
   top: number,
@@ -107,7 +111,8 @@ export const getFindings = async (
 ): Promise<FindingImport[]> => {
   // Read Development Objects
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'GET',
     url:
       BTP_CONNECTOR_PATH +
@@ -120,21 +125,58 @@ export const getFindings = async (
 };
 
 export const getFindingsCount = async (
-  destination: string,
+  connection: Connection,
   projectId: string,
   runId: string
 ): Promise<number> => {
   // Read Development Objects
   const response = await remoteServiceCall({
-    destinationName: destination,
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
     method: 'GET',
     url:
       BTP_CONNECTOR_PATH +
       `ZKNSF_I_FINDINGS/$count?$filter=projectId eq ${projectId} and runId eq ${runId}`
   });
-   LOG.info(
-     `Received response from Destination ${destination}: ${JSON.stringify(response?.result)}`
-   );
+  LOG.info(
+    `Received response from Destination ${connection.destination}: ${JSON.stringify(response?.result)}`
+  );
+  return response.result as number;
+};
+
+export const getMissingClassifications = async (
+  connection: Connection,
+): Promise<MissingClassificationImport[]> => {
+  // Read Development Objects
+  const response = await remoteServiceCall({
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
+    method: 'GET',
+    url: BTP_CONNECTOR_PATH + `ZKNSF_I_MISSING` //TODO we need to do this chunked or not?
+  });
+  // LOG.info(
+  //   `Received response from Destination ${destination}: ${JSON.stringify(response?.result?.value)}`
+  // );
+  return response.result.value as MissingClassificationImport[];
+};
+
+export const getMissingClassificationsCount = async (
+  connection: Connection,
+  projectId: string,
+  runId: string
+): Promise<number> => {
+  // Read Development Objects
+  const response = await remoteServiceCall({
+    destinationName: connection.destination,
+    jwtToken: connection.jwtToken,
+    method: 'GET',
+    url:
+      BTP_CONNECTOR_PATH +
+      `ZKNSF_I_FINDINGS/$count?$filter=projectId eq ${projectId} and runId eq ${runId}`
+  });
+  LOG.info(
+    `Received response from Destination ${connection.destination}: ${JSON.stringify(response?.result)}`
+  );
   return response.result as number;
 };
 

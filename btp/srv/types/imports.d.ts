@@ -127,3 +127,9 @@ export type UsageImport = {
   counter: number;
   last_used: string;
 };
+
+export type MissingClassificationImport = ClassificationKey & {
+  subType: string;
+  applicationComponent: string;
+  softwareComponent: string;
+};

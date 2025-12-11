@@ -1,5 +1,13 @@
 import { Export, Import, Job } from '#cds-models/kernseife/db';
-import cds, { log, utils, entities, Transaction, db } from '@sap/cds';
+import cds, {
+  log,
+  utils,
+  entities,
+  Transaction,
+  db,
+  context,
+  EventContext
+} from '@sap/cds';
 import { JobResult } from '../types/jobs';
 
 const LOG = log('Jobs');
@@ -81,9 +89,10 @@ export const runAsJob = async (
     throw new Error('progressTotal is Not a Number: ' + progressTotal);
   }
   const jobId = await createJob(title, type, progressTotal);
-
+  const { user } = context as EventContext;
+  LOG.info(`Starting Job ${jobId} as user ${user.id}`, user);
   cds
-    .spawn({ after: 200 }, async (tx: Transaction) => {
+    .spawn({ user, after: 200 }, async (tx: Transaction) => {
       return await jobFunction(tx, (progress) =>
         updateJobProgress(jobId, tx, progress)
       );

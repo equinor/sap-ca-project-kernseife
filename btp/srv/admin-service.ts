@@ -1,5 +1,5 @@
 import { Jobs } from '#cds-models/AdminService';
-import { connect, entities, log, Service, Transaction } from '@sap/cds';
+import { entities, log, Service, Transaction } from '@sap/cds';
 import { PassThrough } from 'stream';
 import dayjs from 'dayjs';
 import {
@@ -14,7 +14,8 @@ import {
   importExternalClassificationById,
   importMissingClassificationsById,
   syncClassificationsToExternalSystemByRef,
-  syncClassificationsToExternalSystems
+  syncClassificationsToExternalSystems,
+  importMissingClassificationsBTP,
 } from './features/classification-feature';
 import {
   calculateScores,
@@ -220,6 +221,12 @@ export default (srv: Service) => {
             );
           case 'BTP_DEVELOPMENT_OBJECTS':
             return await importDevelopmentObjectsBTP(ID, tx, updateProgress);
+          case 'BTP_MISSING_CLASSIFICATION':
+            return await importMissingClassificationsBTP(
+              ID,
+              tx,
+              updateProgress
+            );
           default:
             LOG.error(`Unknown Import Type ${importType}`);
             throw new Error(`Unknown Import Type ${importType}`);
@@ -331,7 +338,10 @@ export default (srv: Service) => {
       };
     }
 
-    const message = await setupProject(system.destination);
+    const message = await setupProject({
+      destination: system.destination,
+      jwtToken: req.headers.authorization
+    });
     handleMessage(req, message);
   });
 
@@ -344,7 +354,10 @@ export default (srv: Service) => {
       };
     }
 
-    const message = await triggerAtcRun(system.destination);
+    const message = await triggerAtcRun({
+      destination: system.destination,
+      jwtToken: req.headers.authorization
+    });
     handleMessage(req, message);
   });
 
@@ -356,10 +369,10 @@ export default (srv: Service) => {
       if (system.destination) {
         LOG.info('Authorization', { auth: req.headers.authorization });
         try {
-          const project = await getProject(
-            system.destination,
-            req.headers.authorization
-          );
+          const project = await getProject({
+            destination: system.destination,
+            jwtToken: req.headers.authorization
+          });
           //LOG.info('Project for System', { project });
           system.project = project;
           system.setupDone = true;
