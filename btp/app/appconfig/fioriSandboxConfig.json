@@ -22,7 +22,7 @@
                                 },
                                 {
                                     "id": "AnalyzeOverview",
-                                    "tileType": "sapF.ushell.ui.tile.StaticTile",
+                                    "tileType": "sap.ushell.ui.tile.StaticTile",
                                     "properties": {
                                         "title": "Analyze Overview",
                                         "targetURL": "#Overview-analyze"

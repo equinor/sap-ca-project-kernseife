@@ -1,15 +1,28 @@
 using AdminService as service from '../../srv/admin-service';
 
 annotate service.DevelopmentObjects with @(
-    Capabilities     : {FilterFunctions: ['tolower',
+    Capabilities          : {FilterFunctions: ['tolower',
     ]},
-    UI.Identification: [
-                        // {
-                        //     $Type : 'UI.DataFieldForAction',
-                        //     Action : 'AdminService.calculateScore',
-                        //     Label : 'calculateScore',
-                        // },
-                       ],
+    UI.Identification     : [
+                             // {
+                             //     $Type : 'UI.DataFieldForAction',
+                             //     Action : 'AdminService.calculateScore',
+                             //     Label : 'calculateScore',
+                             // },
+                            ],
+    UI.FieldGroup #metrics: {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Value: difficulty,
+            },
+            {
+                $Type: 'UI.DataField',
+                Value: numberOfChanges,
+            },
+        ],
+    },
 );
 
 annotate service.DevelopmentObjects with @(
@@ -130,7 +143,21 @@ annotate service.DevelopmentObjects with @(
             $Type : 'UI.DataFieldForAction',
             Action: 'AdminService.EntityContainer/recalculateAllScores',
             Label : '{i18n>recalculateAllScores}',
-        }
+        },
+        {
+            $Type                : 'UI.DataField',
+            Value                : difficulty,
+            Label                : '{i18n>difficulty}',
+            ![@UI.Importance]    : #Low,
+            ![@HTML5.CssDefaults]: {width: '6rem'},
+        },
+        {
+            $Type                : 'UI.DataField',
+            Value                : numberOfChanges,
+            Label                : '{i18n>numberOfChanges}',
+            ![@UI.Importance]    : #Low,
+            ![@HTML5.CssDefaults]: {width: '6rem'},
+        },
     ],
     UI.DataPoint #CleanupPotentialPercent: {
         $Type                    : 'UI.DataPointType',
@@ -228,9 +255,21 @@ annotate service.DevelopmentObjects with @(
         },
         {
             $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>metrics}',
+            ID    : 'metrics',
+            Target: '@UI.FieldGroup#metrics',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
             Label : '{i18n>findings}',
             ID    : 'findingList',
             Target: 'findingListAggregated/@UI.SelectionPresentationVariant#findingList',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>usages}',
+            ID    : 'usageList',
+            Target: 'usageList/@UI.SelectionPresentationVariant#usageList',
         },
     ]
 );
@@ -244,10 +283,20 @@ annotate service.DevelopmentObjects with @(UI.SelectionFields: [
 ]);
 
 annotate service.DevelopmentObjects with {
-    namespace  @Common.Label: '{i18n>namespace}';
-    systemId   @Common.Label: '{i18n>systemId}';
-    devClass   @Common.Label: '{i18n>devClass}';
-    objectType @Common.Label: '{i18n>objectType}';
+    namespace               @Common.Label: '{i18n>namespace}';
+    systemId                @Common.Label: '{i18n>systemId}';
+    devClass                @Common.Label: '{i18n>devClass}';
+    objectName              @Common.Label: '{i18n>objectName}';
+    objectType              @Common.Label: '{i18n>objectType}';
+    score                   @Common.Label: '{i18n>score}';
+    difficulty              @Common.Label: '{i18n>difficulty}';
+    numberOfChanges         @Common.Label: '{i18n>numberOfChanges}';
+    cleanupPotential        @Common.Label: '{i18n>cleanupPotential}';
+    cleanupPotentialPercent @Common.Label: '{i18n>cleanupPotentialPercent}';
+    level                   @Common.Label: '{i18n>level}';
+    potentialLevel          @Common.Label: '{i18n>potentialLevel}';
+    potentialScore          @Common.Label: '{i18n>potentialScore}';
+    softwareComponent       @Common.Label: '{i18n>softwareComponent}';
 };
 
 annotate service.DevelopmentObjects with @(UI.SelectionPresentationVariant #table: {
@@ -278,6 +327,23 @@ annotate service.DevelopmentObjects with @(UI.SelectionPresentationVariant #tabl
         }, ],
     },
 });
+
+annotate service.DevelopmentObjects with @(UI.HeaderInfo: {
+    Title         : {
+        $Type: 'UI.DataField',
+        Value: '{objectType} - {objectName}',
+    },
+    TypeName      : '',
+    TypeNamePlural: '',
+});
+
+annotate service.DevelopmentObjects with {
+    languageVersion_code @Common.Text: {
+        $value                : languageVersion.title,
+        ![@UI.TextArrangement]: #TextFirst,
+    }
+};
+
 
 annotate service.FindingsAggregated with @(
     UI.LineItem #findingList                    : [
@@ -362,8 +428,6 @@ annotate service.FindingsAggregated with @(
                 1,
                 3
             ]}},
-
-
             ![@HTML5.CssDefaults]: {width: '6rem'},
         }
     ],
@@ -391,18 +455,58 @@ annotate service.FindingsAggregated with @(
     },
 );
 
-annotate service.DevelopmentObjects with @(UI.HeaderInfo: {
-    Title         : {
-        $Type: 'UI.DataField',
-        Value: '{objectType} - {objectName}',
-    },
-    TypeName      : '',
-    TypeNamePlural: '',
-});
 
-annotate service.DevelopmentObjects with {
-    languageVersion_code @Common.Text: {
-        $value                : languageVersion.title,
-        ![@UI.TextArrangement]: #TextFirst,
-    }
+annotate service.DevelopmentObjectUsages with @(
+    UI.SelectionPresentationVariant #usageList: {
+        $Type              : 'UI.SelectionPresentationVariantType',
+        PresentationVariant: {
+            $Type         : 'UI.PresentationVariantType',
+            Visualizations: ['@UI.LineItem#usageList',
+            ],
+            SortOrder     : [{
+                $Type     : 'Common.SortOrderType',
+                Property  : counter,
+                Descending: true,
+            }, ],
+        },
+        SelectionVariant   : {
+            $Type        : 'UI.SelectionVariantType',
+            SelectOptions: [],
+        },
+    },
+    UI.LineItem #usageList                    : [
+        {
+            $Type                : 'UI.DataField',
+            Label                : '{i18n>entryPointObjectType}',
+            Value                : entryPointObjectType,
+            ![@HTML5.CssDefaults]: {width: '4rem'},
+        },
+        {
+            $Type                : 'UI.DataField',
+            Label                : '{i18n>entryPointObjectName}',
+            Value                : entryPointObjectName,
+            ![@HTML5.CssDefaults]: {width: '18rem'},
+        },
+        {
+            $Type                : 'UI.DataField',
+            Label                : '{i18n>counter}',
+            Value                : counter,
+            ![@HTML5.CssDefaults]: {width: '6rem'},
+            ![@UI.Importance]    : #Medium,
+        },
+        {
+            $Type                : 'UI.DataField',
+            Label                : '{i18n>lastUsed}',
+            Value                : lastUsed,
+            ![@HTML5.CssDefaults]: {width: '8rem'},
+            ![@UI.Importance]    : #Low,
+        },
+    ]
+);
+
+annotate service.DevelopmentObjectUsages with {
+    entryPointObjectName @Common.Label: '{i18n>entryPointObjectName}';
+    entryPointObjectType @Common.Label: '{i18n>entryPointObjectType}';
+    counter              @Common.Label: '{i18n>counter}';
+    lastUsed             @Common.Label: '{i18n>lastUsed}';
 };

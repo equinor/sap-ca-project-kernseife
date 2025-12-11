@@ -1,6 +1,7 @@
 CLASS lhc_project DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PUBLIC SECTION.
-    METHODS finish_setup IMPORTING p_task TYPE c.
+    METHODS setup_finish IMPORTING p_task TYPE c.
+    METHODS run_atc_finish IMPORTING p_task TYPE c.
   PRIVATE SECTION.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
@@ -12,11 +13,19 @@ CLASS lhc_project DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS uploadfile FOR MODIFY
       IMPORTING keys FOR ACTION project~uploadfile.
+    METHODS runatc FOR MODIFY
+      IMPORTING keys FOR ACTION project~runatc.
 
 
 
-    DATA: create_project_message TYPE string.
-    DATA: project_creation_finished TYPE abap_boolean.
+
+    DATA: setup_message TYPE string.
+    DATA: setup_finished TYPE abap_boolean.
+    DATA: setup_error TYPE abap_boolean.
+
+    DATA: run_atc_message TYPE string.
+    DATA: run_atc_error TYPE abap_boolean.
+    DATA: run_atc_finished TYPE abap_boolean.
 ENDCLASS.
 
 CLASS lhc_project IMPLEMENTATION.
@@ -29,31 +38,32 @@ CLASS lhc_project IMPLEMENTATION.
     SELECT SINGLE  description FROM zknsf_i_projects INTO @DATA(description).
     IF sy-subrc EQ 0 AND description IS NOT INITIAL.
       " Error => already exists
-      reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-warning text = |Kernseife Project already exists: {  description }| ) ) ).
+      reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-warning text = |Kernseife Project already exists| ) ) ).
       RETURN.
     ENDIF.
 
-    project_creation_finished = abap_false.
-    CALL FUNCTION 'ZKNSF_CREATE_PROJECT' STARTING NEW TASK 'KNSF_CREATE'
+    setup_finished = abap_false.
+    CALL FUNCTION 'ZKNSF_CREATE_PROJECT' STARTING NEW TASK 'ZKNSF_SETUP'
       DESTINATION 'NONE'
-      CALLING finish_setup ON END OF TASK.
+      CALLING setup_finish ON END OF TASK.
 
-    WAIT FOR ASYNCHRONOUS TASKS UNTIL project_creation_finished EQ abap_true.
+    WAIT FOR ASYNCHRONOUS TASKS UNTIL setup_finished EQ abap_true.
 
-    IF create_project_message IS NOT INITIAL.
-      reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-error text = |Failed: {  create_project_message }| ) ) ).
+    IF setup_error IS NOT INITIAL.
+      reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-error text = |Failed: {  setup_message }| ) ) ).
       RETURN.
     ENDIF.
 
     reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-success text = |Project created| ) ) ).
   ENDMETHOD.
 
-  METHOD finish_setup.
+  METHOD setup_finish.
 
     RECEIVE RESULTS FROM FUNCTION 'ZKNSF_CREATE_PROJECT'
        IMPORTING
-         e_message = create_project_message.
-    project_creation_finished = abap_true.
+         e_message = setup_message
+         e_error = setup_error.
+    setup_finished = abap_true.
   ENDMETHOD.
 
 
@@ -98,4 +108,32 @@ CLASS lhc_project IMPLEMENTATION.
         ASSERT 1 = 2.
     ENDTRY.
   ENDMETHOD.
+
+  METHOD runatc.
+
+    run_atc_finished = abap_false.
+    CALL FUNCTION 'ZKNSF_RUN_ATC' STARTING NEW TASK 'ZKNSF_ATC'
+      DESTINATION 'NONE'
+      CALLING run_atc_finish ON END OF TASK.
+
+    WAIT FOR ASYNCHRONOUS TASKS UNTIL run_atc_finished EQ abap_true.
+
+    IF run_atc_error IS NOT INITIAL.
+      reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-error text = |Failed: {  run_atc_message }| ) ) ).
+      RETURN.
+    ENDIF.
+
+    reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-error text = |Success: Started ATC Run| ) ) ).
+  ENDMETHOD.
+
+  METHOD run_atc_finish.
+
+    RECEIVE RESULTS FROM FUNCTION 'ZKNSF_RUN_ATC'
+       IMPORTING
+         e_message = run_atc_message
+         e_error = run_atc_error.
+    run_atc_finished = abap_true.
+  ENDMETHOD.
+
+
 ENDCLASS.

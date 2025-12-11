@@ -3,10 +3,10 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <HEAD>
-    <NAME>ZKNSF_CREATE_PROJECT</NAME>
+    <NAME>ZKNSF_RUN_ATC</NAME>
     <TYPE>RF</TYPE>
-    <DISPLAY_NAME>ZKNSF_CREATE_PROJECT</DISPLAY_NAME>
-    <STEXT>Kernseife: Create Custom Code Project</STEXT>
+    <DISPLAY_NAME>ZKNSF_RUN_ATC</DISPLAY_NAME>
+    <STEXT>Kernseife: Run ATC</STEXT>
    </HEAD>
   </asx:values>
  </asx:abap>

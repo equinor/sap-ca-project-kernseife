@@ -1,5 +1,5 @@
 import { Jobs } from '#cds-models/AdminService';
-import { connect, entities, log, Service, Transaction } from '@sap/cds';
+import { entities, log, Service, Transaction } from '@sap/cds';
 import { PassThrough } from 'stream';
 import dayjs from 'dayjs';
 import {
@@ -14,12 +14,14 @@ import {
   importExternalClassificationById,
   importMissingClassificationsById,
   syncClassificationsToExternalSystemByRef,
-  syncClassificationsToExternalSystems
+  syncClassificationsToExternalSystems,
+  importMissingClassificationsBTP,
 } from './features/classification-feature';
 import {
   calculateScores,
   calculateScoreByRef,
-  importFindingsById
+  importFindingsById,
+  importDevelopmentObjectsBTP
 } from './features/developmentObject-feature';
 import {
   addAllUnassignedDevelopmentObjects,
@@ -29,6 +31,7 @@ import {
 } from './features/extension-feature';
 import {
   createExport,
+  createImport,
   jobHasExports,
   jobHasImports,
   runAsJob,
@@ -39,11 +42,16 @@ import {
   loadReleaseState,
   updateClassificationsFromReleaseStates
 } from './features/releaseState-feature';
-import { createInitialData, setupSystem } from './features/setup-feature';
+import { createInitialData } from './features/setup-feature';
 import JSZip from 'jszip';
 import { handleMessage, updateDestinations } from './lib/connectivity';
-import { timeStamp } from 'console';
 import { JobResult } from './types/jobs';
+import {
+  getProject,
+  setupProject,
+  triggerAtcRun
+} from './features/btp-connector-feature';
+import { System } from '#cds-models/kernseife/db';
 
 export default (srv: Service) => {
   const LOG = log('AdminService');
@@ -211,6 +219,14 @@ export default (srv: Service) => {
               tx,
               updateProgress
             );
+          case 'BTP_DEVELOPMENT_OBJECTS':
+            return await importDevelopmentObjectsBTP(ID, tx, updateProgress);
+          case 'BTP_MISSING_CLASSIFICATION':
+            return await importMissingClassificationsBTP(
+              ID,
+              tx,
+              updateProgress
+            );
           default:
             LOG.error(`Unknown Import Type ${importType}`);
             throw new Error(`Unknown Import Type ${importType}`);
@@ -300,13 +316,48 @@ export default (srv: Service) => {
     'syncClassifications',
     ['Systems', 'Systems.drafts'],
     async (req: any) => {
-      await syncClassificationsToExternalSystemByRef(req.subject);
-      req.notify('SYNC_SUCCESSFUL');
+      try {
+        await syncClassificationsToExternalSystemByRef(req.subject);
+
+        req.notify('SYNC_SUCCESSFUL');
+      } catch (e: any) {
+        handleMessage(req, {
+          message: e.message,
+          numericSeverity: 3
+        });
+      }
     }
   );
 
   srv.on('setupSystem', ['Systems', 'Systems.drafts'], async (req: any) => {
-    const message = await setupSystem(req.subject);
+    const system: System = await SELECT.one.from(req.subject);
+    if (!system || !system.destination) {
+      return {
+        message: 'SYSTEM_NO_DESTINATION',
+        numericSeverity: 3
+      };
+    }
+
+    const message = await setupProject({
+      destination: system.destination,
+      jwtToken: req.headers.authorization
+    });
+    handleMessage(req, message);
+  });
+
+  srv.on('triggerATCRun', ['Systems', 'Systems.drafts'], async (req: any) => {
+    const system: System = await SELECT.one.from(req.subject);
+    if (!system || !system.destination) {
+      return {
+        message: 'SYSTEM_NO_DESTINATION',
+        numericSeverity: 3
+      };
+    }
+
+    const message = await triggerAtcRun({
+      destination: system.destination,
+      jwtToken: req.headers.authorization
+    });
     handleMessage(req, message);
   });
 
@@ -314,17 +365,23 @@ export default (srv: Service) => {
   srv.after('READ', ['Systems', 'Systems.drafts'], async (Systems, req) => {
     for (const system of Systems as any[]) {
       system.setupDone = false;
+      system.setupNotDone = true;
       if (system.destination) {
-        const btp = await connect.to('kernseife_btp', {
-          credentials: {
+        LOG.info('Authorization', { auth: req.headers.authorization });
+        try {
+          const project = await getProject({
             destination: system.destination,
-            path: '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001'
-          }
-        });
-        const projectList = await btp.run(SELECT('ZKNSF_I_PROJECTS'));
-        if (projectList && projectList.length == 1) {
-          system.project = projectList[0];
+            jwtToken: req.headers.authorization
+          });
+          //LOG.info('Project for System', { project });
+          system.project = project;
           system.setupDone = true;
+          system.setupNotDone = false; // As UI Bindings cannot handle negation
+        } catch (e) {
+          LOG.error('Error getting Project for System', {
+            systemId: system.ID,
+            error: e
+          });
         }
       }
     }
@@ -336,6 +393,35 @@ export default (srv: Service) => {
       // Check if Job has Imports
       job.hideImports = !(await jobHasImports(job.ID!));
       job.hideExports = !(await jobHasExports(job.ID!));
+    }
+  });
+
+  srv.on('triggerImport', async (req: any) => {
+    LOG.info('Trigger Import', req.data);
+    const { importType, systemId } = req.data;
+    const importId = await createImport(
+      importType,
+      '',
+      null,
+      '',
+      systemId,
+      '',
+      false,
+      ''
+    );
+
+    if (importId) {
+      await srv.emit('Imported', {
+        ID: importId,
+        type: importType
+      });
+
+      req.notify({
+        message: 'Import started',
+        status: 200
+      });
+    } else {
+      req.error(400);
     }
   });
 

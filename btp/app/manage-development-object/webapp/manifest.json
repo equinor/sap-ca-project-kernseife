@@ -184,7 +184,9 @@
           "options": {
             "settings": {
               "editableHeaderContent": false,
-              "contextPath": "/DevelopmentObjects"
+              "contextPath": "/DevelopmentObjects",
+               "enhanceI18n": "i18n/custom.properties",
+              "useTextForNoDataMessages": true
             }
           },
           "controlAggregation": "midColumnPages",

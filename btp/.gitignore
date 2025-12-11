@@ -44,3 +44,5 @@ Makefile_*.mta
 .cdsrc-private.json
 
 test/data/
+
+CUSTOM_*.mtaext

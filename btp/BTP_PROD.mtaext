@@ -7,6 +7,12 @@ resources:
   - name: kernseife-db
     parameters:
       service-name: kernseife-prod-db
-  - name: kernseife-cloud-logging
+
+
+modules: 
+  - name: kernseife-srv
     parameters:
-      service-plan: standard
+      memory: 4GB
+      disk-quota: 2GB
+
+

@@ -94,13 +94,15 @@ service AdminService @(requires: 'admin') {
     entity Systems                       as
         projection on db.Systems {
             *,
-            virtual setupDone : Boolean,
-            project           : Association to Projects
-                                    on project.systemId = $self.sid //Not exactly correct, but we need an ON condition here
+            virtual setupDone    : Boolean,
+            virtual setupNotDone : Boolean,
+            project              : Association to Projects
+                                       on project.systemId = $self.sid //Not exactly correct, but we need an ON condition here
         }
         actions {
             action syncClassifications();
             action setupSystem();
+            action triggerATCRun();
         };
 
 
@@ -171,6 +173,7 @@ service AdminService @(requires: 'admin') {
 
     // Actions
     action triggerExport(exportType: String, legacy: Boolean, dateFrom: Timestamp); // as "export" is not allowed due to TS type generation
+    action triggerImport(importType: String, systemId: String);
 
     entity AdoptionEffort                as projection on db.AdoptionEffort;
 
@@ -205,6 +208,8 @@ service AdminService @(requires: 'admin') {
     entity ExportTypes                   as projection on db.ExportTypes
                                             where
                                                 hidden == false;
+
+    entity DevelopmentObjectUsages       as projection on db.DevelopmentObjectUsages;
 
     @cds.redirection.target: false
     define view RatingsValueList as

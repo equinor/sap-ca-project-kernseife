@@ -11,7 +11,7 @@
     <item>
      <FUNCNAME>ZKNSF_CREATE_PROJECT</FUNCNAME>
      <REMOTE_CALL>R</REMOTE_CALL>
-     <SHORT_TEXT>Kernseife: Create Custom Code Project using BOPF</SHORT_TEXT>
+     <SHORT_TEXT>Kernseife: Create Custom Code Project</SHORT_TEXT>
      <EXPORT>
       <RSEXP>
        <PARAMETER>E_MESSAGE</PARAMETER>
@@ -31,6 +31,31 @@
        <PARAMETER>E_ERROR</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Truth Value: True/False</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
+     <FUNCNAME>ZKNSF_RUN_ATC</FUNCNAME>
+     <REMOTE_CALL>R</REMOTE_CALL>
+     <SHORT_TEXT>Kernseife: Run ATC</SHORT_TEXT>
+     <EXPORT>
+      <RSEXP>
+       <PARAMETER>E_MESSAGE</PARAMETER>
+       <TYP>STRING</TYP>
+      </RSEXP>
+      <RSEXP>
+       <PARAMETER>E_ERROR</PARAMETER>
+       <TYP>ABAP_BOOLEAN</TYP>
+      </RSEXP>
+     </EXPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>E_MESSAGE</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>E_ERROR</PARAMETER>
+       <KIND>P</KIND>
       </RSFDO>
      </DOCUMENTATION>
     </item>

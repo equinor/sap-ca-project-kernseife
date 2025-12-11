@@ -125,6 +125,13 @@ entity DevelopmentObjects : managed {
         potentialLevel          : CleanCoreLevel;
         cleanupPotential        : Integer       = score - potentialScore stored;
 
+        difficulty              : Integer default 0;
+        numberOfChanges         : Integer default 0;
+
+        usageList               : Association to many DevelopmentObjectUsages
+                                      on  usageList.objectType = $self.objectType
+                                      and usageList.objectName = $self.objectName;
+
         @Common.Label                   : '{i18n>cleanupPotentialPercent}'
         @Measures.Unit                  : '%'
         cleanupPotentialPercent : Decimal(8, 2) = (
@@ -1139,3 +1146,13 @@ entity JobTypes                     as
                 ) as code : String,
                 title
         }
+
+@cds.persistence.journal
+entity DevelopmentObjectUsages {
+    key entryPointObjectType : String;
+    key entryPointObjectName : String;
+    key objectType           : String;
+    key objectName           : String;
+        counter              : Integer;
+        lastUsed             : DateTime;
+}

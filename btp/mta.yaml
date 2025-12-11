@@ -32,7 +32,7 @@ modules:
       - name: kernseife-db
       - name: kernseife-auth
       - name: kernseife-destination
-      - name: kernseife-cloud-logging
+      - name: kernseife-connectivity
       - name: kernseife-autoscaler
         parameters:
           config:
@@ -290,6 +290,10 @@ resources:
             description: Kernseife Admin
             role-template-references:
               - $XSAPPNAME.admin
+          - name: 'kernseife-analyst-${space}'
+            description: Kernseife Analyst
+            role-template-references:
+              - $XSAPPNAME.analyst
           - name: 'kernseife-viewer-${space}'
             description: Kernseife Viewer
             role-template-references:
@@ -342,6 +346,14 @@ resources:
       service: autoscaler
       service-name: kernseife-autoscaler
       service-plan: standard
+  # ------------------------------------------------------------
+  - name: kernseife-connectivity
+    # ------------------------------------------------------------
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: connectivity
+      service-name: kernseife-connectivity
+      service-plan: lite
   - name: kernseife-cloud-logging
     type: org.cloudfoundry.managed-service
     parameters:
