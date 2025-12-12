@@ -19,7 +19,6 @@ import {
 } from './features/classification-feature';
 import {
   calculateScores,
-  calculateScoreByRef,
   importFindingsById,
   importDevelopmentObjectsBTP
 } from './features/developmentObject-feature';
@@ -235,11 +234,6 @@ export default (srv: Service) => {
     );
 
     await setJobIdForImport(ID, jobId);
-  });
-
-  srv.on('recalculateScore', async (req) => {
-    LOG.debug('Calculate Score');
-    return await calculateScoreByRef(req.subject);
   });
 
   srv.on('recalculateAllScores', async () => {
