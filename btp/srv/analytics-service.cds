@@ -36,7 +36,7 @@ service AnalyticsService @(requires: [
             cleanupPotentialPercent : Decimal(8, 2),
             level,
             @Analytics.Measure: true  @Aggregation.default: #SUM
-            1 as objectCount        : Integer
+            1 as objectCount        : Integer,
         }
 
 
@@ -77,6 +77,20 @@ service AnalyticsService @(requires: [
         excluding {
             developemtObjectList
         };
+
+
+    @Aggregation.CustomAggregate #score: 'Edm.Decimal'
+    @readonly
+    entity HistoricDevelopmentObjects    as
+        select from db.HistoricDevelopmentObjects {
+            objectType,
+            objectName,
+            devClass,
+            systemId,
+            score,
+            level
+        }
+
 
     @readonly
     entity Ratings                       as projection on db.Ratings;

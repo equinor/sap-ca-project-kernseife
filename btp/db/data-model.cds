@@ -134,6 +134,7 @@ aspect DevelopmentObjectAspect {
 }
 
 @cds.persistence.journal
+
 entity DevelopmentObjects : managed, DevelopmentObjectAspect {
     version_ID  : UUID;
     version     : Association to DevelopmentObjectVersions
@@ -146,6 +147,12 @@ entity DevelopmentObjects : managed, DevelopmentObjectAspect {
                       and findingList.devClass   = $self.devClass
                       and findingList.systemId   = $self.systemId
                       and findingList.version_ID = $self.version_ID;
+
+    history     : Association to many HistoricDevelopmentObjects
+                      on  $self.objectType = history.objectType
+                      and $self.objectName = history.objectName
+                      // Devclass does not decide history...
+                      and $self.systemId   = history.systemId
 }
 
 @cds.persistence.journal

@@ -19,10 +19,17 @@ service AdminService @(requires: 'admin') {
 
     entity DevelopmentObjects            as projection on db.DevelopmentObjects;
 
+    entity DevelopmentObjectsFindings    as projection on db.DevelopmentObjectFindings;
+
+    entity HistoricDevelopmentObjects    as
+        projection on db.HistoricDevelopmentObjects {
+            *,
+            ROW_NUMBER() over(partition by objectType, objectName, systemId order by createdAt asc) as versionNumber : Integer
+        } order by versionNumber desc;
+
     entity Imports                       as projection on db.Imports;
     entity Exports                       as projection on db.Exports;
 
-    entity DevelopmentObjectsFindings    as projection on db.DevelopmentObjectFindings;
 
     entity SimplificationItems           as projection on db.SimplificationItems;
 

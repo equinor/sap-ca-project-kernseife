@@ -23,6 +23,11 @@ annotate service.DevelopmentObjects with @(
             },
         ],
     },
+    UI.HeaderFacets       : [{
+        $Type : 'UI.ReferenceFacet',
+        ID    : 'HistoricScore',
+        Target: 'history/@UI.Chart#HistoricScore',
+    }, ],
 );
 
 annotate service.DevelopmentObjects with @(
@@ -271,6 +276,12 @@ annotate service.DevelopmentObjects with @(
             ID    : 'usageList',
             Target: 'usageList/@UI.SelectionPresentationVariant#usageList',
         },
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label : '{i18n>scoreHistory}',
+            ID    : 'ScoreHistory',
+            Target: 'history/@UI.LineItem#ScoreHistory',
+        },
     ]
 );
 
@@ -513,3 +524,46 @@ annotate service.DevelopmentObjectsFindings with {
         Common.Text.@UI.TextArrangement: #TextFirst,
     )
 };
+
+annotate service.HistoricDevelopmentObjects with @(
+    UI.DataPoint #HistoricScore: {
+        Value      : score,
+        Criticality: #Positive
+    },
+    UI.Chart #HistoricScore    : {
+        ChartType          : #Line,
+        Title              : '{i18n>scoreHistory}',
+        Measures           : [score, ],
+        MeasureAttributes  : [{
+            DataPoint: '@UI.DataPoint#HistoricScore',
+            Role     : #Axis1,
+            Measure  : score,
+        }, ],
+        Dimensions         : [versionNumber],
+        DimensionAttributes: [
+
+        ]
+    },
+    UI.LineItem #ScoreHistory  : [
+        {
+            $Type: 'UI.DataField',
+            Value: versionNumber,
+            Label: '{i18n>versionNumber}',
+        },
+        {
+            $Type: 'UI.DataField',
+            Value: createdAt,
+            Label: '{i18n>createdAt}',
+        },
+        {
+            $Type: 'UI.DataField',
+            Value: score,
+            Label: '{i18n>score}',
+        },
+        {
+            $Type: 'UI.DataField',
+            Value: level,
+            Label: '{i18n>level}',
+        },
+    ],
+);
