@@ -292,7 +292,7 @@ annotate service.DevelopmentObjectFindings with @(
         },
         {
             $Type                    : 'UI.DataField',
-            Value                    : score,
+            Value                    : rating.score,
             Label                    : '{i18n>score}',
             Criticality              : rating.criticality.criticality,
             CriticalityRepresentation: #WithoutIcon,
@@ -382,7 +382,7 @@ annotate service.DevelopmentObjects with @(
             },
             {
                 $Type: 'UI.DataField',
-                Value: score,
+                Value: score
             }
         ],
     },

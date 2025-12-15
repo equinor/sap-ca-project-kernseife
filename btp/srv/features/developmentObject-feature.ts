@@ -13,6 +13,7 @@ import { db, entities, log, Transaction } from '@sap/cds';
 import { text } from 'node:stream/consumers';
 import papa from 'papaparse';
 import {
+  getRatingMap,
   getSuccessorKey,
   getSuccessorRatingMap
 } from './classification-feature';
@@ -91,48 +92,46 @@ export const calculateScores = async () => {
   );
 };
 
-const calculateScoreAndLevel = async (
-  developmentObject: DevelopmentObject
-): Promise<{
+export const calculateScoreAndLevel = (
+  ratingMap: Map<string, { level: CleanCoreLevel; score: number }>,
+  findingList: DevelopmentObjectFindings
+): {
   score: number;
   potentialScore: number;
   level: CleanCoreLevel;
   potentialLevel: CleanCoreLevel;
-}> => {
-  const result = await SELECT.from(entities.DevelopmentObjectFindings)
-    .columns(
-      `sum(rating.score) as score`,
-      `sum(potentialRating.score) as potentialScore`,
-      `max(rating.level) as level`,
-      `max(potentialRating.level) as potentialLevel`
-    )
-    .where({
-      version_ID: developmentObject.version_ID,
-      objectType: developmentObject.objectType,
-      objectName: developmentObject.objectName,
-      devClass: developmentObject.devClass,
-      systemId: developmentObject.systemId
-    })
-    .groupBy('version_ID', 'objectType', 'objectName', 'devClass', 'systemId');
-  if (!result || result.length != 1 || result[0].score == null) {
-    return {
+} => {
+  return findingList.reduce(
+    (acc, finding) => {
+      const potentialRating = ratingMap.get(finding.potentialCode!);
+      const rating = ratingMap.get(finding.code!);
+      if (!rating || !potentialRating) throw Error('Rating Config missmatch');
+
+      return {
+        score: acc.score + (finding.total || 0),
+        potentialScore:
+          acc.potentialScore +
+          ratingMap.get(finding.potentialCode!)!.score * finding.count!,
+
+        level: rating.level! > acc.level ? rating.level : acc.level,
+        potentialLevel:
+          potentialRating.level! > acc.potentialLevel
+            ? potentialRating.level
+            : acc.potentialLevel
+      };
+    },
+    {
       score: 0,
       potentialScore: 0,
       level: CleanCoreLevel.A,
       potentialLevel: CleanCoreLevel.A
-    };
-  }
-
-  return {
-    score: result[0]?.score || 0,
-    potentialScore:
-      result[0]?.potentialScore != null
-        ? result[0]?.potentialScore
-        : result[0]?.score || 0,
-    level: result[0]?.level || CleanCoreLevel.A,
-    potentialLevel:
-      result[0]?.potentialLevel || result[0]?.level || CleanCoreLevel.A
-  };
+    } as {
+      score: number;
+      potentialScore: number;
+      level: CleanCoreLevel;
+      potentialLevel: CleanCoreLevel;
+    }
+  );
 };
 
 export const getDevelopmentObjectIdentifier = (
@@ -252,6 +251,8 @@ export const importFinding = async (
     await tx.commit();
   }
 
+  const ratingMap = await getRatingMap();
+
   let progressCount = 0;
   let insertCount = 0;
   const chunkSize = 1000;
@@ -306,7 +307,10 @@ export const importFinding = async (
       await createDevelopmentObjectFindings(developmentObjectFindingList);
 
       const { score, potentialScore, level, potentialLevel } =
-        await calculateScoreAndLevel(developmentObject);
+        calculateScoreAndLevel(ratingMap, developmentObjectFindingList);
+
+      calculateTotalPercent(developmentObjectFindingList, score);
+
       developmentObject.potentialScore = potentialScore;
       developmentObject.score = score;
 
@@ -469,6 +473,7 @@ export const importDevelopmentObjectsBTP = async (
   // Get Development Objects
   let insertCount = 0;
 
+  const ratingMap = await getRatingMap();
   const map = new Map<string, string>();
 
   const developmentObjectCount = await getDevelopmentObjectsCount(
@@ -516,7 +521,9 @@ export const importDevelopmentObjectsBTP = async (
       await createDevelopmentObjectFindings(developmentObjectFindingList);
 
       const { score, potentialScore, level, potentialLevel } =
-        await calculateScoreAndLevel(developmentObject);
+        calculateScoreAndLevel(ratingMap, developmentObjectFindingList);
+      calculateTotalPercent(developmentObjectFindingList, score);
+      
       developmentObject.potentialScore = potentialScore;
       developmentObject.score = score;
 
@@ -645,11 +652,9 @@ const getDevelopmentObjectFindings = async (
     .columns(
       'refObjectType',
       'refObjectName',
+      'softwareComponent',
       'code',
-      'score',
-      'level',
-      'potentialScore',
-      'potentialLevel',
+      'potentialCode',
       'count',
       'total'
     )
@@ -660,22 +665,34 @@ const getDevelopmentObjectFindings = async (
       devClass: developmentObject.devClass,
       systemId: developmentObject.systemId
     });
+
   // Convert to Development ObjectFindings
   return findingList.map(
     (finding) =>
       ({
         version_ID: versionId,
-        objectType: finding.objectType,
-        objectName: finding.objectName,
-        devClass: finding.devClass,
-        systemId: finding.systemId,
-        softwareComponent: finding.softwareComponent,
+        objectType: developmentObject.objectType,
+        objectName: developmentObject.objectName,
+        devClass: developmentObject.devClass,
+        systemId: developmentObject.systemId,
+        softwareComponent: developmentObject.softwareComponent,
         refObjectType: finding.refObjectType,
         refObjectName: finding.refObjectName,
         code: finding.code,
         potentialCode: finding.potentialCode,
         count: finding.count,
-        total: finding.total
+        total: finding.total,
+        totalPercentage: 0
       }) as DevelopmentObjectFinding
   );
+};
+
+export const calculateTotalPercent = (
+  findingList: DevelopmentObjectFindings,
+  score: number
+) => {
+  findingList.forEach((finding) => {
+    finding.totalPercentage =
+      score == 0 ? 0 : (100 / score) * (finding.total || 0);
+  });
 };

@@ -99,7 +99,6 @@ aspect DevelopmentObjectAspect {
             }
         })
         languageVersion_code    : String;
-        version_ID              : UUID;
 
 
         score                   : Integer;
@@ -126,16 +125,7 @@ aspect DevelopmentObjectAspect {
         // Associations
         languageVersion         : Association to LanguageVersions
                                       on languageVersion.code = $self.languageVersion_code;
-        version                 : Association to DevelopmentObjectVersions
-                                      on version.ID = $self.version_ID;
 
-
-        findingList             : Association to many DevelopmentObjectFindings
-                                      on  findingList.objectType = $self.objectType
-                                      and findingList.objectName = $self.objectName
-                                      and findingList.devClass   = $self.devClass
-                                      and findingList.systemId   = $self.systemId
-                                      and findingList.version_ID = $self.version_ID;
 
         usageList               : Association to many DevelopmentObjectUsages
                                       on  usageList.objectType = $self.objectType
@@ -144,10 +134,26 @@ aspect DevelopmentObjectAspect {
 }
 
 @cds.persistence.journal
-entity DevelopmentObjects : managed, DevelopmentObjectAspect {}
+entity DevelopmentObjects : managed, DevelopmentObjectAspect {
+    version_ID  : UUID;
+    version     : Association to DevelopmentObjectVersions
+                      on version.ID = $self.version_ID;
+
+
+    findingList : Association to many DevelopmentObjectFindings
+                      on  findingList.objectType = $self.objectType
+                      and findingList.objectName = $self.objectName
+                      and findingList.devClass   = $self.devClass
+                      and findingList.systemId   = $self.systemId
+                      and findingList.version_ID = $self.version_ID;
+}
 
 @cds.persistence.journal
-entity HistoricDevelopmentObjects : managed, DevelopmentObjectAspect {}
+entity HistoricDevelopmentObjects : managed, DevelopmentObjectAspect {
+    key version_ID : UUID;
+        version    : Association to DevelopmentObjectVersions
+                         on version.ID = $self.version_ID;
+}
 
 @cds.persistence.journal
 entity DevelopmentObjectVersions : managed, cuid {
@@ -1125,7 +1131,7 @@ entity FindingsAggregated as
         key f.refObjectType,
         key f.messageId          as code,
             f.potentialMessageId as potentialCode,
-            f.softwareComponent,
+            f.softwareComponent  as softwareComponent,
             count( * )           as count : Integer,
             count( * ) * r.score as total : Integer
     }

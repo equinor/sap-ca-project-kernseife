@@ -1,6 +1,7 @@
 import {
   Classification,
   Classifications,
+  CleanCoreLevel,
   Import,
   Ratings,
   ReleaseState,
@@ -31,7 +32,6 @@ import { streamToBuffer } from '../lib/files';
 import { createExport } from './jobs-feature';
 import { Note } from '#cds-models/AdminService';
 import { JobResult } from '../types/jobs';
-import { Connection } from '../types/connectivity';
 import {
   getDestinationBySystemId,
   getMissingClassifications
@@ -91,6 +91,8 @@ export const getClassificationState = (classification: Classification) => {
       return 'classicAPI';
     case 'NO_API':
       return 'noAPI';
+    case 'RELEASED':
+      throw new Error('Not supported in this mapping');
     default:
       return 'internalAPI';
   }
@@ -271,9 +273,7 @@ export const updateSimplifications = async (classification: Classification) => {
 export const updateTotalScoreAndReferenceCount = async (
   classification: Classification
 ) => {
-  const totalScoreResult = await SELECT.from(
-    entities.DevelopmentObjects
-  )
+  const totalScoreResult = await SELECT.from(entities.DevelopmentObjects)
     .columns(
       'IFNULL(SUM(total),0) as totalScore',
       'IFNULL(SUM(count), 0) as referenceCount'
@@ -301,7 +301,7 @@ export const updateTotalScoreAndReferenceCount = async (
   return true;
 };
 
-const determineRatingPrefix = (
+export const determineRatingPrefix = (
   classification: Classification,
   suffix: string
 ) => {
@@ -375,6 +375,18 @@ const getDefaultRatingCode = (classification: Classification) => {
     default:
       return getRatingforBusinessAndFrameworks(classification);
   }
+};
+
+export const getRatingMap = async (): Promise<
+  Map<string, { score: number; level: CleanCoreLevel }>
+> => {
+  const ratingList: Ratings = await SELECT.from(entities.Ratings, (c: any) => {
+    c.code, c.score, c.level;
+  });
+  return ratingList.reduce((map, rating) => {
+    map.set(rating.code!, { score: rating.score!, level: rating.level! });
+    return map;
+  }, new Map<string, { score: number; level: CleanCoreLevel }>());
 };
 
 export const getRatingScoreMap = async (): Promise<Map<string, number>> => {
