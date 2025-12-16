@@ -85,7 +85,8 @@ service AnalyticsService @(requires: [
                 sum(score) as score : Integer,
         }
         group by
-            version_ID;
+            version.systemId,
+            version.createdAt;
 
     @readonly
     entity Ratings                       as projection on db.Ratings;
