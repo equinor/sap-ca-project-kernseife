@@ -539,7 +539,9 @@ export const importMissingClassifications = async (
   });
 
   if (!classificationRecordList || classificationRecordList.length == 0) {
-    throw new Error('No valid Findings Found');
+    return {
+      message: 'No Missing Classifications found'
+    };
   }
 
   if (
