@@ -43,8 +43,17 @@ CLASS ZKNSF_CL_USAGE_PREPROCESSOR IMPLEMENTATION.
     " Get the standard prepare_usages in
     DATA(parent) = super->prepare_usages( usages = standard_usages ).
 
+
     "Merge both
     LOOP AT parent INTO DATA(line).
+      IF line-object_type = 'DDLS'.
+        " Check if a Stob Exists
+        SELECT SINGLE cdsname FROM all_cds_stob_views  WHERE ddlsourcename = @line-sub_key INTO @DATA(cds_view_name) .
+        IF sy-subrc EQ 0 AND cds_view_name IS NOT INITIAL.
+          line-object_type = 'CDS_STOB'.
+          line-sub_key = cds_view_name.
+        ENDIF.
+      ENDIF.
       INSERT line INTO TABLE result.
     ENDLOOP.
   ENDMETHOD.

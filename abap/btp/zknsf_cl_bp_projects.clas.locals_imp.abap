@@ -104,8 +104,8 @@ CLASS lhc_project IMPLEMENTATION.
                                                     file_name    = CONV string( file_name )
                                                     file_type    = file_type
                                                     uploader     = sy-uname ).
-      CATCH cx_root.
-        ASSERT 1 = 2.
+      CATCH cx_root INTO DATA(root_exception).
+          reported-%other = VALUE #( ( new_message_with_text( severity = if_abap_behv_message=>severity-error text = |Failed: {  root_exception->get_text( ) }| ) ) ).
     ENDTRY.
   ENDMETHOD.
 

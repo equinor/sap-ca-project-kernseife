@@ -12,14 +12,14 @@ define view entity ZKNSF_I_EXPORT
     left outer join ZKNSF_I_FUNCTION_MODULES as functionModules on functionModules.functionModule = fnd.refObjectName
     left outer join ALL_CDS_STOB_VIEWS       as cds_stob        on cds_stob.DDLSourceName = fnd.refObjectName
     left outer join ALL_CDS_SQL_VIEWS        as cds_sql         on cds_sql.DDLSourceName = fnd.refObjectName
-    inner join      tdevc                    as devClass        on fnd.devClass = devClass.devclass
+    left outer join      tdevc                    as devClass        on fnd.devClass = devClass.devclass
 
 {
   key     cast( fnd.displayId  as zknsf_run_id)                                                                  as runId,
   key     cast( fnd.itemId as zknsf_item_id preserving type )                                                    as itemId,
           cast( fnd.objectType as zknsf_object_type )                                                            as objectType,
           cast( fnd.objectName as zknsf_object_name preserving type )                                            as objectName,
-          cast(case fnd.objectType when 'DEVC' then devClass.parentcl else fnd.devClass end as zknsf_dev_class ) as devClass,
+          cast(case when fnd.objectType = 'DEVC' and devClass.parentcl is not null then devClass.parentcl else fnd.devClass end as zknsf_dev_class ) as devClass,
           cast( fnd.softwareComponent as zknsf_sw_comp )                                                         as softwareComponent,
           cast( fnd.messageId as zknsf_message_id )                                                              as messageId,
           cast(  case fnd.refObjectType
