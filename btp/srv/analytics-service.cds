@@ -20,8 +20,8 @@ service AnalyticsService @(requires: [
             ) as extension          : String,
             languageVersion,
             languageVersion_code,
-            findingListAggregated,
-            latestFindingImportId,
+            findingList,
+            version_ID,
             namespace,
             @Analytics.Measure: true  @Aggregation.default: #SUM
             score,
@@ -36,10 +36,8 @@ service AnalyticsService @(requires: [
             cleanupPotentialPercent : Decimal(8, 2),
             level,
             @Analytics.Measure: true  @Aggregation.default: #SUM
-            1 as objectCount        : Integer
+            1 as objectCount        : Integer,
         }
-        where
-            latestFindingImportId != '';
 
 
     @cds.redirection.target: false
@@ -66,7 +64,7 @@ service AnalyticsService @(requires: [
             devClass;
 
     @readonly
-    entity FindingsAggregated            as projection on db.FindingsAggregated;
+    entity DevelopmentObjectFindings     as projection on db.DevelopmentObjectFindings;
 
     @readonly
     entity Classifications               as
@@ -79,6 +77,19 @@ service AnalyticsService @(requires: [
         excluding {
             developemtObjectList
         };
+
+    entity ScoreHistory                  as
+        select from db.HistoricDevelopmentObjects as h
+        inner join db.DevelopmentObjectVersions as v
+            on h.extension_ID = v.ID
+        {
+            key v.systemId,
+            key v.createdAt,
+                sum(score) as score : Integer,
+        }
+        group by
+            v.systemId,
+            v.createdAt;
 
     @readonly
     entity Ratings                       as projection on db.Ratings;
@@ -166,9 +177,8 @@ service AnalyticsService @(requires: [
     }
 
     @readonly
-    entity DevelopmentObjectsAggregated  as projection on db.DevelopmentObjectsAggregated;
-
-    @readonly
     @cds.redirection.target: false
     entity ObjectTypeValueList           as projection on db.ObjectTypeValueList;
+
+
 }

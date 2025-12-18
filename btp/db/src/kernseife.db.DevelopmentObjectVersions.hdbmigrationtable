@@ -1,0 +1,10 @@
+== version=1
+COLUMN TABLE kernseife_db_DevelopmentObjectVersions (
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  ID NVARCHAR(36) NOT NULL,
+  systemId NVARCHAR(5000),
+  PRIMARY KEY(ID)
+)

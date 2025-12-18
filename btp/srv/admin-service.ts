@@ -15,11 +15,10 @@ import {
   importMissingClassificationsById,
   syncClassificationsToExternalSystemByRef,
   syncClassificationsToExternalSystems,
-  importMissingClassificationsBTP,
+  importMissingClassificationsBTP
 } from './features/classification-feature';
 import {
   calculateScores,
-  calculateScoreByRef,
   importFindingsById,
   importDevelopmentObjectsBTP
 } from './features/developmentObject-feature';
@@ -237,11 +236,6 @@ export default (srv: Service) => {
     await setJobIdForImport(ID, jobId);
   });
 
-  srv.on('recalculateScore', async (req) => {
-    LOG.debug('Calculate Score');
-    return await calculateScoreByRef(req.subject);
-  });
-
   srv.on('recalculateAllScores', async () => {
     await calculateScores();
   });
@@ -367,13 +361,12 @@ export default (srv: Service) => {
       system.setupDone = false;
       system.setupNotDone = true;
       if (system.destination) {
-        LOG.info('Authorization', { auth: req.headers.authorization });
         try {
           const project = await getProject({
             destination: system.destination,
             jwtToken: req.headers.authorization
           });
-          //LOG.info('Project for System', { project });
+
           system.project = project;
           system.setupDone = true;
           system.setupNotDone = false; // As UI Bindings cannot handle negation

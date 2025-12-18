@@ -1,6 +1,7 @@
 import {
   Classification,
   Classifications,
+  CleanCoreLevel,
   Import,
   Ratings,
   ReleaseState,
@@ -9,7 +10,7 @@ import {
   Systems
 } from '#cds-models/kernseife/db';
 import dayjs from 'dayjs';
-import { Transaction, connect, db, entities, log, utils } from '@sap/cds';
+import { Transaction, db, entities, log, utils } from '@sap/cds';
 import { text } from 'node:stream/consumers';
 import papa from 'papaparse';
 import {
@@ -31,10 +32,10 @@ import { streamToBuffer } from '../lib/files';
 import { createExport } from './jobs-feature';
 import { Note } from '#cds-models/AdminService';
 import { JobResult } from '../types/jobs';
-import { Connection } from '../types/connectivity';
 import {
   getDestinationBySystemId,
-  getMissingClassifications
+  getMissingClassifications,
+  syncClassifications
 } from './btp-connector-feature';
 
 const LOG = log('ClassificationFeature');
@@ -91,6 +92,8 @@ export const getClassificationState = (classification: Classification) => {
       return 'classicAPI';
     case 'NO_API':
       return 'noAPI';
+    case 'RELEASED':
+      throw new Error('Not supported in this mapping');
     default:
       return 'internalAPI';
   }
@@ -271,9 +274,7 @@ export const updateSimplifications = async (classification: Classification) => {
 export const updateTotalScoreAndReferenceCount = async (
   classification: Classification
 ) => {
-  const totalScoreResult = await SELECT.from(
-    entities.DevelopmentObjectsAggregated
-  )
+  const totalScoreResult = await SELECT.from(entities.DevelopmentObjects)
     .columns(
       'IFNULL(SUM(total),0) as totalScore',
       'IFNULL(SUM(count), 0) as referenceCount'
@@ -301,7 +302,7 @@ export const updateTotalScoreAndReferenceCount = async (
   return true;
 };
 
-const determineRatingPrefix = (
+export const determineRatingPrefix = (
   classification: Classification,
   suffix: string
 ) => {
@@ -375,6 +376,18 @@ const getDefaultRatingCode = (classification: Classification) => {
     default:
       return getRatingforBusinessAndFrameworks(classification);
   }
+};
+
+export const getRatingMap = async (): Promise<
+  Map<string, { score: number; level: CleanCoreLevel }>
+> => {
+  const ratingList: Ratings = await SELECT.from(entities.Ratings, (c: any) => {
+    c.code, c.score, c.level;
+  });
+  return ratingList.reduce((map, rating) => {
+    map.set(rating.code!, { score: rating.score!, level: rating.level! });
+    return map;
+  }, new Map<string, { score: number; level: CleanCoreLevel }>());
 };
 
 export const getRatingScoreMap = async (): Promise<Map<string, number>> => {
@@ -526,7 +539,9 @@ export const importMissingClassifications = async (
   });
 
   if (!classificationRecordList || classificationRecordList.length == 0) {
-    throw new Error('No valid Findings Found');
+    return {
+      message: 'No Missing Classifications found'
+    };
   }
 
   if (
@@ -1778,7 +1793,7 @@ export const syncClassificationsToExternalSystemByRef = async (ref: any) => {
   LOG.info(
     `Created ZIP file for Classification JSON, size ${zipFile.length} bytes`
   );
-  await syncClassificationsToExternalSystem(system, zipFile);
+  await syncClassifications({ destination: system.destination! }, zipFile);
 };
 
 export const syncClassificationsToExternalSystems = async () => {
@@ -1789,39 +1804,6 @@ export const syncClassificationsToExternalSystems = async () => {
   const classificationJson = await getClassificationJsonCustom();
   const zipFile = await getClassificationJsonAsZip(classificationJson);
   for (const system of systemList) {
-    await syncClassificationsToExternalSystem(system, zipFile);
-  }
-};
-
-const syncClassificationsToExternalSystem = async (
-  system: System,
-  zipFile: Buffer<ArrayBufferLike>
-) => {
-  const service = await connect.to('kernseife_btp', {
-    credentials: {
-      destination: system.destination,
-      path: '/sap/opu/odata4/sap/zknsf_btp_connector/srvd/sap/zknsf_btp_connector/0001'
-    }
-  });
-  LOG.info(
-    `Sending Classification ZIP to System ${system.sid} via Destination ${system.destination}`
-  );
-  const response = await service.send(
-    'POST',
-    '/ZKNSF_I_PROJECTS/com.sap.gateway.srvd.zknsf_btp_connector.v0001.UploadFile',
-    {
-      dummy: true,
-      _StreamProperties: {
-        streamProperty: zipFile.toString('base64'),
-        mimeType: 'application/zip',
-        fileName: `classification_${dayjs().format('YYYY_MM_DD')}.zip`
-      }
-    }
-  );
-  LOG.info(
-    `Received response from System ${system.sid}: ${JSON.stringify(response?.message)}`
-  );
-  if (response?.status !== 200) {
-    throw new Error(`${response?.message?.message}`);
+    await syncClassifications({ destination: system.destination! }, zipFile);
   }
 };

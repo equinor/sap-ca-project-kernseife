@@ -4,12 +4,16 @@ import {
   FindingRecord,
   CleanCoreLevel,
   DevelopmentObjects,
-  DevelopmentObjectUsage
+  DevelopmentObjectUsage,
+  DevelopmentObjectFindings,
+  DevelopmentObjectFinding,
+  FindingsAggregated
 } from '#cds-models/kernseife/db';
-import { db, entities, log, Transaction, context } from '@sap/cds';
+import { db, entities, log, Transaction } from '@sap/cds';
 import { text } from 'node:stream/consumers';
 import papa from 'papaparse';
 import {
+  getRatingMap,
   getSuccessorKey,
   getSuccessorRatingMap
 } from './classification-feature';
@@ -52,53 +56,6 @@ export const determineNamespace = (developmentObject: DevelopmentObject) => {
   }
 };
 
-export const calculateScoreByRef = async (ref: any) => {
-  // read Development Object
-  const developmentObject = await SELECT.one.from(ref);
-
-  // Get Latest Scoring Run
-  const findingRecordList: (FindingRecord & { score: number; code: string })[] =
-    await SELECT.from(entities.FindingRecords)
-      .columns(
-        'itemId',
-        'messageId',
-        'classification.rating.code as code',
-        'classification.rating.score as score'
-      )
-      .where({
-        import_ID: developmentObject.latestFindingImportId,
-        objectType: developmentObject.objectType,
-        objectName: developmentObject.objectName,
-        devClass: developmentObject.devClass,
-        systemId: developmentObject.systemId
-      });
-  LOG.info('findingRecordList', { findingRecordList: findingRecordList });
-  const score = findingRecordList.reduce((sum, row) => {
-    return sum + row.score;
-  }, 0);
-  developmentObject.score = score || 0;
-  LOG.info('Development Object Score', {
-    score: developmentObject.score
-  });
-  // Update Development Object
-  await UPSERT.into(entities.DevelopmentObjects).entries([developmentObject]);
-  // Update Scoring Findings
-  for (const findingRecord of findingRecordList) {
-    if (findingRecord.messageId !== findingRecord.code) {
-      await UPDATE.entity(entities.FindingRecords)
-        .with({
-          messageId: findingRecord.code + findingRecord.messageId!.substring(3)
-        })
-        .where({
-          import_ID: developmentObject.latestFindingImportId,
-          itemId: findingRecord.itemId
-        });
-    }
-  }
-
-  return developmentObject;
-};
-
 export const calculateNamespaces = async () => {
   if (db.kind != 'sqlite') {
     await db.run(
@@ -108,26 +65,21 @@ export const calculateNamespaces = async () => {
 };
 
 export const calculateScores = async () => {
-  // we could put all 3 operations into once Statement, but this is easier to debug
+  // we could put all operations into once Statement, but this is easier to debug
 
-  // First update Scoring Records with latest classification ratings in case those changed
+  // Update Development Object Finding Totals
   await db.run(
-    'UPDATE kernseife_db_FINDINGRECORDS as s SET messageId = CONCAT((SELECT c.rating_code FROM kernseife_db_CLASSIFICATIONS as c WHERE c.objectType = s.refObjectType AND c.objectName = s.refObjectName), SUBSTRING(s.messageId, 4))'
+    'UPDATE kernseife_db_DEVELOPMENTOBJECTFINDINGS as d SET total = d.count * (SELECT IFNULL(score,0) FROM kernseife_db_RATINGS WHERE code = d.code)'
   );
+  //TODO Update totalPercent
 
-  // Calculate Score for all Development Objects
+  // Calculate Total Score for all Development Objects
   await db.run(
-    'UPDATE kernseife_db_DEVELOPMENTOBJECTS as d SET score = IFNULL((' +
-      'SELECT IFNULL(sum(r.score),0) AS sum_score ' +
-      'FROM kernseife_db_FINDINGRECORDS as f ' +
-      'INNER JOIN kernseife_db_RATINGS as r ON r.code = f.messageId ' +
-      'WHERE f.objectType = d.objectType AND f.objectName = d.objectName AND f.devClass = d.devClass AND f.systemId = d.systemId AND d.latestFindingImportId = f.import_ID ' +
-      'GROUP BY f.import_ID, f.objectType, f.objectName, f.devClass, f.systemId),0)'
-  );
-
-  // Set Score to 0 in case there are no findings
-  await db.run(
-    "UPDATE kernseife_db_DEVELOPMENTOBJECTS as d SET score = 0 WHERE score IS NULL AND latestFindingImportId IS NOT NULL AND latestFindingImportId != ''"
+    'UPDATE kernseife_db_DEVELOPMENTOBJECTS as d SET score = IFNULL(' +
+      'SELECT sum(IFNULL(f.total,0))) AS sum_score ' +
+      'FROM kernseife_db_DEVELOPMENTOBJECTFINDINGS as f ' +
+      'WHERE f.objectType = d.objectType AND f.objectName = d.objectName AND f.devClass = d.devClass AND f.systemId = d.systemId ' +
+      ',0)'
   );
 
   // Calculate Name spaces
@@ -135,53 +87,51 @@ export const calculateScores = async () => {
   // Calculate Reference Count & Score
   await db.run(
     'UPDATE kernseife_db_CLASSIFICATIONS as c SET ' +
-      'referenceCount =  IFNULL((SELECT SUM(count) FROM kernseife_db_DevelopmentObjectsAggregated as d WHERE d.refObjectType = c.objectType AND d.refObjectName = c.objectName),0),' +
-      'totalScore = IFNULL((SELECT SUM(score) FROM kernseife_db_DevelopmentObjectsAggregated as d WHERE d.refObjectType = c.objectType AND d.refObjectName = c.objectName),0)'
+      'referenceCount =  IFNULL((SELECT SUM(count) FROM kernseife_db_DEVELOPMENTOBJECTFINDINGS as f WHERE f.refObjectType = c.objectType AND f.refObjectName = c.objectName),0),' +
+      'totalScore = IFNULL((SELECT SUM(total) FROM kernseife_db_DEVELOPMENTOBJECTFINDINGS as f WHERE f.refObjectType = c.objectType AND f.refObjectName = c.objectName),0)'
   );
 };
 
-const calculateScoreAndLevel = async (
-  developmentObject: DevelopmentObject
-): Promise<{
+export const calculateScoreAndLevel = (
+  ratingMap: Map<string, { level: CleanCoreLevel; score: number }>,
+  findingList: DevelopmentObjectFindings
+): {
   score: number;
   potentialScore: number;
   level: CleanCoreLevel;
   potentialLevel: CleanCoreLevel;
-}> => {
-  const result = await SELECT.from(entities.FindingRecords)
-    .columns(
-      `sum(rating.score) as score`,
-      `sum(potentialRating.score) as potentialScore`,
-      `max(rating.level) as level`,
-      `max(potentialRating.level) as potentialLevel`
-    )
-    .where({
-      import_ID: developmentObject.latestFindingImportId,
-      objectType: developmentObject.objectType,
-      objectName: developmentObject.objectName,
-      devClass: developmentObject.devClass,
-      messageId: { 'not in': ['X', '2', '5'] }
-    })
-    .groupBy('import_ID', 'objectType', 'objectName', 'devClass');
-  if (!result || result.length != 1 || result[0].score == null) {
-    return {
+} => {
+  return findingList.reduce(
+    (acc, finding) => {
+      const potentialRating = ratingMap.get(finding.potentialCode!);
+      const rating = ratingMap.get(finding.code!);
+      if (!rating || !potentialRating) throw Error('Rating Config missmatch');
+
+      return {
+        score: acc.score + (finding.total || 0),
+        potentialScore:
+          acc.potentialScore +
+          ratingMap.get(finding.potentialCode!)!.score * finding.count!,
+
+        level: rating.level! > acc.level ? rating.level : acc.level,
+        potentialLevel:
+          potentialRating.level! > acc.potentialLevel
+            ? potentialRating.level
+            : acc.potentialLevel
+      };
+    },
+    {
       score: 0,
       potentialScore: 0,
       level: CleanCoreLevel.A,
       potentialLevel: CleanCoreLevel.A
-    };
-  }
-
-  return {
-    score: result[0]?.score || 0,
-    potentialScore:
-      result[0]?.potentialScore != null
-        ? result[0]?.potentialScore
-        : result[0]?.score || 0,
-    level: result[0]?.level || CleanCoreLevel.A,
-    potentialLevel:
-      result[0]?.potentialLevel || result[0]?.level || CleanCoreLevel.A
-  };
+    } as {
+      score: number;
+      potentialScore: number;
+      level: CleanCoreLevel;
+      potentialLevel: CleanCoreLevel;
+    }
+  );
 };
 
 export const getDevelopmentObjectIdentifier = (
@@ -296,11 +246,12 @@ export const importFinding = async (
 
   LOG.info(`Importing Findings ${findingRecordList.length}`);
 
-  // Remove all Development Objects for this System
-  // may be in the future we do a versioning per Run
-  await DELETE(entities.DevelopmentObjects).where({
-    systemId: findingImport.systemId
-  });
+  await prepareNewDevelopmentObjectsImport(findingImport);
+  if (tx) {
+    await tx.commit();
+  }
+
+  const ratingMap = await getRatingMap();
 
   let progressCount = 0;
   let insertCount = 0;
@@ -330,9 +281,10 @@ export const importFinding = async (
     LOG.info(`Processing ${i}/${findingRecordList.length}`);
     const chunk = findingRecordList.slice(i, i + chunkSize);
 
-    const developmentObjectInsert = [] as Partial<DevelopmentObject>[];
+    const developmentObjectInsert = [] as DevelopmentObjects;
     for (const findingRecord of chunk) {
       progressCount++;
+
       // Create a new Development Object
       const developmentObject = {
         objectType: findingRecord.objectType || '',
@@ -340,13 +292,25 @@ export const importFinding = async (
         systemId: findingRecord.systemId || '',
         devClass: findingRecord.devClass || '',
         softwareComponent: findingRecord.softwareComponent || '',
-        latestFindingImportId: findingImport.ID,
+        version_ID: findingImport.ID,
         languageVersion_code: findingRecord.messageId,
-        namespace: ''
+        namespace: '',
+        difficulty: 0, // Not available via import by file
+        numberOfChanges: 0 // Not available via import by file
       } as DevelopmentObject;
 
+      // Process the DevelopmentObjectFindings, cause we need it to calculate stuff later
+      const developmentObjectFindingList = await getDevelopmentObjectFindings(
+        developmentObject,
+        findingImport.ID!
+      );
+      await createDevelopmentObjectFindings(developmentObjectFindingList);
+
       const { score, potentialScore, level, potentialLevel } =
-        await calculateScoreAndLevel(developmentObject);
+        calculateScoreAndLevel(ratingMap, developmentObjectFindingList);
+
+      calculateTotalPercent(developmentObjectFindingList, score);
+
       developmentObject.potentialScore = potentialScore;
       developmentObject.score = score;
 
@@ -380,9 +344,7 @@ export const importFinding = async (
       insertCount++;
     }
     if (developmentObjectInsert.length > 0) {
-      await INSERT.into(entities.DevelopmentObjects).entries(
-        developmentObjectInsert
-      );
+      await createDevelopmentObjects(developmentObjectInsert);
       if (tx) {
         await tx.commit();
       }
@@ -408,7 +370,7 @@ export const importFindingsById = async (
 ): Promise<JobResult> => {
   const findingsRunImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
-      d.ID, d.title, d.file, d.systemId;
+      d.ID, d.title, d.file, d.systemId, d.createdAt;
     })
     .where({ ID: findingImportId });
   return await importFinding(findingsRunImport, tx, updateProgress);
@@ -421,7 +383,7 @@ export const importDevelopmentObjectsBTP = async (
 ): Promise<JobResult> => {
   const developmentObjectsImport = await SELECT.one
     .from(entities.Imports, (d: Import) => {
-      d.ID, d.title, d.systemId;
+      d.ID, d.title, d.systemId, d.createdAt;
     })
     .where({ ID: importId });
 
@@ -431,7 +393,7 @@ export const importDevelopmentObjectsBTP = async (
   const destination = await getDestinationBySystemId(systemId);
 
   // Get Project Id
-  const project = await getProject({ destination }); 
+  const project = await getProject({ destination });
 
   let top = 1000;
   let skip = 0;
@@ -503,15 +465,15 @@ export const importDevelopmentObjectsBTP = async (
       await updateProgress(Math.round((50 / findingsCount) * findingsCounter));
   }
 
-  // Remove all Development Objects for this System
-  // may be in the future we do a versioning per Run
-  await DELETE(entities.DevelopmentObjects).where({
-    systemId: systemId
-  });
+  await prepareNewDevelopmentObjectsImport(developmentObjectsImport);
+  if (tx) {
+    await tx.commit();
+  }
 
   // Get Development Objects
   let insertCount = 0;
 
+  const ratingMap = await getRatingMap();
   const map = new Map<string, string>();
 
   const developmentObjectCount = await getDevelopmentObjectsCount(
@@ -544,15 +506,24 @@ export const importDevelopmentObjectsBTP = async (
         systemId: systemId,
         devClass: developmentObjectImport.devClass,
         softwareComponent: developmentObjectImport.softwareComponent,
-        latestFindingImportId: developmentObjectsImport.ID,
+        version_ID: developmentObjectsImport.ID,
         languageVersion_code: developmentObjectImport.languageVersion,
         difficulty: developmentObjectImport._metrics?.difficulty || 0,
         numberOfChanges: developmentObjectImport._metrics?.numberOfChanges || 0,
         namespace: ''
       } as DevelopmentObject;
 
+      // Process the DevelopmentObjectFindings, cause we need it to calculate stuff later
+      const developmentObjectFindingList = await getDevelopmentObjectFindings(
+        developmentObject,
+        developmentObjectsImport.ID!
+      );
+      await createDevelopmentObjectFindings(developmentObjectFindingList);
+
       const { score, potentialScore, level, potentialLevel } =
-        await calculateScoreAndLevel(developmentObject);
+        calculateScoreAndLevel(ratingMap, developmentObjectFindingList);
+      calculateTotalPercent(developmentObjectFindingList, score);
+      
       developmentObject.potentialScore = potentialScore;
       developmentObject.score = score;
 
@@ -604,9 +575,7 @@ export const importDevelopmentObjectsBTP = async (
       }
     }
     if (developmentObjectInsert.length > 0) {
-      await INSERT.into(entities.DevelopmentObjects).entries(
-        developmentObjectInsert
-      );
+      await createDevelopmentObjects(developmentObjectInsert);
       if (tx) {
         await tx.commit();
       }
@@ -629,4 +598,101 @@ export const importDevelopmentObjectsBTP = async (
     message: `Inserted ${insertCount} DevelopmentObject(s)`,
     exportIdList: []
   } as JobResult;
+};
+
+const createDevelopmentObjects = async (
+  developmentObjectsList: DevelopmentObjects
+) => {
+  await INSERT.into(entities.DevelopmentObjects).entries(
+    developmentObjectsList
+  );
+
+  // Also add them to History
+  await INSERT.into(entities.HistoricDevelopmentObjects).entries(
+    developmentObjectsList
+  );
+};
+
+const createDevelopmentObjectFindings = async (
+  developmentObjectFindingList: DevelopmentObjectFindings
+) => {
+  await INSERT.into(entities.DevelopmentObjectFindings).entries(
+    developmentObjectFindingList
+  );
+
+  //TODO Check if we need to commit?
+};
+
+const prepareNewDevelopmentObjectsImport = async (
+  developmentImport: Import
+) => {
+  // Remove all Development Objects for this System
+  await DELETE(entities.DevelopmentObjects).where({
+    systemId: developmentImport.systemId
+  });
+
+  await DELETE(entities.DevelopmentObjectFindings).where({
+    systemId: developmentImport.systemId
+  });
+
+  // Create new DevelopmentObjectVersion
+  await INSERT.into(entities.DevelopmentObjectVersions).entries([
+    { ID: developmentImport.ID, systemId: developmentImport.systemId }
+  ]);
+};
+
+const getDevelopmentObjectFindings = async (
+  developmentObject: DevelopmentObject,
+  versionId: string
+) => {
+  // Select all FindingsRecords for Development Object aggregated
+  const findingList: FindingsAggregated[] = await SELECT.from(
+    entities.FindingsAggregated
+  )
+    .columns(
+      'refObjectType',
+      'refObjectName',
+      'softwareComponent',
+      'code',
+      'potentialCode',
+      'count',
+      'total'
+    )
+    .where({
+      importId: versionId, // as we use the same UUID for both
+      objectType: developmentObject.objectType,
+      objectName: developmentObject.objectName,
+      devClass: developmentObject.devClass,
+      systemId: developmentObject.systemId
+    });
+
+  // Convert to Development ObjectFindings
+  return findingList.map(
+    (finding) =>
+      ({
+        version_ID: versionId,
+        objectType: developmentObject.objectType,
+        objectName: developmentObject.objectName,
+        devClass: developmentObject.devClass,
+        systemId: developmentObject.systemId,
+        softwareComponent: developmentObject.softwareComponent,
+        refObjectType: finding.refObjectType,
+        refObjectName: finding.refObjectName,
+        code: finding.code,
+        potentialCode: finding.potentialCode,
+        count: finding.count,
+        total: finding.total,
+        totalPercentage: 0
+      }) as DevelopmentObjectFinding
+  );
+};
+
+export const calculateTotalPercent = (
+  findingList: DevelopmentObjectFindings,
+  score: number
+) => {
+  findingList.forEach((finding) => {
+    finding.totalPercentage =
+      score == 0 ? 0 : (100 / score) * (finding.total || 0);
+  });
 };

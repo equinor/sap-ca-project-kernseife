@@ -30,13 +30,11 @@ service ViewerService @(requires: [
         projection on db.DevelopmentObjects
         excluding {
             findingList
-        }
-        where
-            latestFindingImportId != '';
+        };
 
 
     @readonly
-    entity FindingsAggregated     as projection on db.FindingsAggregated;
+    entity DevelopmentObjectFindings     as projection on db.DevelopmentObjectFindings;
 
 
     @readonly
@@ -140,10 +138,6 @@ service ViewerService @(requires: [
 
     @readonly
     entity Imports                       as projection on db.Imports;
-
-    @readonly
-    entity DevelopmentObjectsAggregated  as projection on db.DevelopmentObjectsAggregated;
-
 
     @cds.redirection.target: false
     define view RatingsValueList as

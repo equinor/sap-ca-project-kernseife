@@ -17,24 +17,20 @@ service AdminService @(requires: 'admin') {
             devClass;
 
 
-    entity DevelopmentObjects            as projection on db.DevelopmentObjects
-                                            where
-                                                latestFindingImportId != ''
-        actions {
-            @(Common.SideEffects: {TargetEntities: ['/AdminService.EntityContainer/DevelopmentObjects/findingListAggregated'], })
-            action recalculateScore() returns DevelopmentObjects;
-        }
+    entity DevelopmentObjects            as projection on db.DevelopmentObjects;
+
+    entity DevelopmentObjectsFindings    as projection on db.DevelopmentObjectFindings;
+
+    entity HistoricDevelopmentObjects    as
+        projection on db.HistoricDevelopmentObjects {
+            *,
+            ROW_NUMBER() over(partition by objectType, objectName, systemId order by createdAt asc) as versionNumber : Integer
+        } order by versionNumber desc;
 
     entity Imports                       as projection on db.Imports;
     entity Exports                       as projection on db.Exports;
 
-    entity FindingRecords                as
-        projection on db.FindingRecords {
-            *,
-            developmentObject.latestFindingImportId as latestFindingimportId
-        };
 
-    entity FindingsAggregated            as projection on db.FindingsAggregated;
     entity SimplificationItems           as projection on db.SimplificationItems;
 
     type inFramework                  : {
@@ -70,7 +66,6 @@ service AdminService @(requires: 'admin') {
     entity Frameworks                    as projection on db.Frameworks;
 
     entity FrameworkTypes                as projection on db.FrameworkTypes;
-    entity DevelopmentObjectsAggregated  as projection on db.DevelopmentObjectsAggregated;
     entity SuccessorClassifications      as projection on db.SuccessorClassifications;
     entity ReleaseInfo                   as projection on db.ReleaseInfo;
     entity ClassicInfo                   as projection on db.ClassicInfo;
